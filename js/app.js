@@ -5,7 +5,11 @@ const App = {
   profile: null,
   settings: { music: true, lang: 'zh' },
   screen: 'login',
-  API: 'api/',
+  API: (() => {
+    const path = window.location.pathname || '/';
+    const base = path.endsWith('/') ? path : path.replace(/\/[^/]*$/, '/');
+    return base + 'api/';
+  })(),
   _saveTimer: null,
   _saveInFlight: false,
   _saveQueued: false,
@@ -32,6 +36,21 @@ const App = {
     return table[key]?.[lang] || table[key]?.zh || key;
   },
 
+  parseApiResponse(text) {
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch (e) { /* fall through */ }
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(text.slice(start, end + 1));
+      } catch (e) { /* fall through */ }
+    }
+    return null;
+  },
+
   async api(path, data = {}) {
     try {
       const res = await fetch(this.API + path, {
@@ -40,18 +59,16 @@ const App = {
         body: JSON.stringify(data),
       });
       const text = await res.text();
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        return {
-          ok: false,
-          error: '服务器返回异常。请用 http://localhost/mario/mario_simple/ 打开，并确认 PHPStudy 已启动。',
-        };
-      }
+      const parsed = this.parseApiResponse(text);
+      if (parsed) return parsed;
+      return {
+        ok: false,
+        error: '服务器返回异常，请确认 api/data 目录可写且 PHP 已启用。',
+      };
     } catch (e) {
       return {
         ok: false,
-        error: '无法连接服务器。请确认 PHPStudy 已启动，并通过 localhost 访问游戏。',
+        error: '无法连接服务器，请检查网络或 API 地址是否正确。',
       };
     }
   },

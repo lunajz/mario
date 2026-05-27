@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -13,7 +16,7 @@ define('DATA_DIR', __DIR__ . '/data');
 
 function ensureDataDir() {
     if (!is_dir(DATA_DIR)) {
-        mkdir(DATA_DIR, 0777, true);
+        @mkdir(DATA_DIR, 0775, true);
     }
 }
 
@@ -27,7 +30,10 @@ function readJson($file, $default = []) {
 
 function writeJson($file, $data) {
     ensureDataDir();
-    file_put_contents(DATA_DIR . '/' . $file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    $path = DATA_DIR . '/' . $file;
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    if ($json === false) return false;
+    return @file_put_contents($path, $json, LOCK_EX) !== false;
 }
 
 function respond($payload, $code = 200) {
