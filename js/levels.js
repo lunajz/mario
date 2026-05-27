@@ -280,7 +280,7 @@ const LEVEL_DATA = [
     platforms: [
       { x: 0, y: 520, w: 200, h: 80, type: 'normal' },
       { x: 280, y: 520, w: 100, h: 30, type: 'moving', moveX: [280, 500], speed: 2 },
-      { x: 600, y: 450, w: 100, h: 30, type: 'moving', moveY: [350, 450], speed: 1.5 },
+      { x: 520, y: 450, w: 120, h: 30, type: 'moving', moveY: [350, 450], speed: 1.5 },
       { x: 850, y: 520, w: 80, h: 30, type: 'normal' },
       { x: 1000, y: 400, w: 100, h: 30, type: 'moving', moveX: [1000, 1300], speed: 2.5 },
       { x: 1400, y: 520, w: 80, h: 30, type: 'normal' },
@@ -293,7 +293,7 @@ const LEVEL_DATA = [
     doors: [{ x: 2650, y: 440, w: 60, h: 80, switchId: 's1' }],
     hazards: [
       { x: 250, y: 600, w: 30, h: 200, type: 'pit' },
-      { x: 550, y: 600, w: 50, h: 200, type: 'pit' },
+      { x: 500, y: 600, w: 40, h: 200, type: 'pit' },
       { x: 950, y: 600, w: 50, h: 200, type: 'pit' },
       { x: 1350, y: 600, w: 50, h: 200, type: 'pit' },
       { x: 1700, y: 600, w: 50, h: 200, type: 'pit' },

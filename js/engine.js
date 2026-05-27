@@ -214,11 +214,22 @@ class GameEngine {
       if (!p.active) continue;
       const px = this.getPlatformX(p);
       const py = this.getPlatformY(p);
-      if (this.aabb(player, { x: px, y: py, w: p.w, h: p.h })) {
-        if (player.vx > 0) player.x = px - player.w;
-        else if (player.vx < 0) player.x = px + p.w;
-        player.vx = 0;
-      }
+      const box = { x: px, y: py, w: p.w, h: p.h };
+      if (!this.aabb(player, box)) continue;
+
+      const platTop = py;
+      const platBottom = py + p.h;
+      const feet = player.y + player.h;
+      const head = player.y;
+
+      // One-way tops: allow jumping onto a platform from the side instead of hitting a side wall.
+      if (feet <= platTop + 12) continue;
+      // Allow walking under floating platforms.
+      if (head >= platBottom - 2) continue;
+
+      if (player.vx > 0) player.x = px - player.w;
+      else if (player.vx < 0) player.x = px + p.w;
+      player.vx = 0;
     }
   }
 
