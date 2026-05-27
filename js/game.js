@@ -245,6 +245,11 @@
 
   window.addEventListener('keydown', (e) => {
     unlockAudio();
+    if (e.code === 'Escape' && gameState !== 'idle') {
+      e.preventDefault();
+      returnToHubFromGame();
+      return;
+    }
     if (e.code === 'Space' && !e.repeat) {
       if (gameState === 'complete') { e.preventDefault(); nextLevel(); return; }
       if (gameState === 'dead') { e.preventDefault(); restartCurrentLevel(); return; }
@@ -279,14 +284,16 @@
   bindTouch('btnJump', 'jump');
   bindTouch('btnInteract', 'interact');
 
-  $('btnNext')?.addEventListener('click', () => nextLevel());
-  $('btnRetry')?.addEventListener('click', () => restartCurrentLevel());
-  $('btnHub')?.addEventListener('click', () => {
+  function returnToHubFromGame() {
     gameState = 'idle';
     input.left = input.right = input.jump = input.interact = false;
     gameAudio?.stopBGM();
     App?.returnToHub?.();
-  });
+  }
+
+  $('btnNext')?.addEventListener('click', () => nextLevel());
+  $('btnRetry')?.addEventListener('click', () => restartCurrentLevel());
+  $('btnHub')?.addEventListener('click', () => returnToHubFromGame());
   $('btnVictoryHub')?.addEventListener('click', () => App?.returnToHub?.());
 
   $('gameOver')?.addEventListener('click', () => {

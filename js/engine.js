@@ -32,6 +32,7 @@ class GameEngine {
     this.H = 600;
     this.camera = { x: 0 };
     this.images = {};
+    this.skinImages = {};
     this.particles = [];
     this.levelTime = 0;
     this.switches = {};
@@ -70,6 +71,17 @@ class GameEngine {
     for (let i = 1; i <= 20; i++) files[`bg${i}`] = [`images/background${i}.jpg`, null];
     await Promise.all(Object.entries(files).map(async ([key, [src, fb]]) => {
       this.images[key] = await loadOne(src, fb);
+    }));
+
+    const fallbackSkinIds = [
+      'skin_default', 'skin_fire', 'skin_snow', 'skin_green', 'skin_vintage',
+      'skin_star', 'skin_neon', 'skin_zombie', 'skin_cosmic',
+    ];
+    const skinIds = (typeof SHOP_CATALOG !== 'undefined' && Array.isArray(SHOP_CATALOG.skins))
+      ? SHOP_CATALOG.skins.map((s) => s.id)
+      : fallbackSkinIds;
+    await Promise.all(skinIds.map(async (id) => {
+      this.skinImages[id] = await loadOne(`images/skins_raw/${id}.png`, null);
     }));
   }
 
@@ -944,6 +956,7 @@ class GameEngine {
     const x = player.x - cam;
     const y = player.y;
     const img = this.images.mario;
+    const skinImg = this.skinImages?.[player.skin] || this.skinImages?.skin_default || null;
 
     if (player.invincible > 0 && Math.floor(player.invincible / 100) % 2 === 0) {
       ctx.globalAlpha = 0.5;
@@ -954,8 +967,17 @@ class GameEngine {
     const ph = player.h * scale;
     const px = x - (pw - player.w) / 2;
     const py = y - (ph - player.h);
-
-    if (img) {
+    if (skinImg) {
+      ctx.save();
+      if (player.facing < 0) {
+        ctx.translate(px + pw, py);
+        ctx.scale(-1, 1);
+        ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, 0, 0, pw, ph);
+      } else {
+        ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, px, py, pw, ph);
+      }
+      ctx.restore();
+    } else if (img) {
       ctx.save();
       if (player.facing < 0) {
         ctx.translate(px + pw, py);

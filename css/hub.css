@@ -254,68 +254,131 @@
 
 .shop-screen { justify-content: flex-start; padding-top: 12px; }
 
-.shop-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: 900px;
-  width: 100%;
-  margin-bottom: 10px;
+.shop-screen .sub-header,
+.shop-screen .sub-header h2,
+.shop-screen .sub-header > span {
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(90, 26, 74, 0.55);
 }
 
-.shop-tab {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 2px solid #ff69b4;
-  background: rgba(255,255,255,0.6);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.shop-tab.active { background: #ff69b4; color: #fff; }
-
-.shop-panel {
-  width: min(900px, 96vw);
-  max-height: 55vh;
-  overflow-y: auto;
-  background: rgba(255,255,255,0.85) url('../images/store/store.png') center top / cover no-repeat;
-  border-radius: 16px;
-  padding: 12px;
-  border: 3px solid #ff69b4;
-}
-
-.shop-grid {
+.skin-carousel {
+  width: min(720px, 96vw);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  background: rgba(255,255,255,0.92);
-  padding: 12px;
-  border-radius: 12px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.85) url('../images/store/store.png') center top / cover no-repeat;
+  border: 3px solid #ff69b4;
+  border-radius: 20px;
+  padding: 20px;
+  touch-action: pan-y;
+  user-select: none;
 }
 
-.shop-card {
+.carousel-arrow {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid #ff69b4;
   background: #fff;
-  border: 2px solid #ffb6d9;
-  border-radius: 12px;
-  padding: 10px;
+  color: #ff1493;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.35);
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.carousel-arrow:hover { background: #ffe0f0; transform: scale(1.08); }
+.carousel-arrow:active { transform: scale(0.94); }
+
+.carousel-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 16px;
+  padding: 20px 16px 16px;
+  min-width: 0;
+}
+
+.skin-preview {
+  width: min(260px, 60vw);
+  height: min(260px, 60vw);
+  border-radius: 16px;
+  background: #fff0f7 url('../images/store/skins.png') no-repeat;
+  background-size: 300% 300%;
+  border: 3px solid #ffb6d9;
+  box-shadow: inset 0 0 0 4px #fff, 0 6px 18px rgba(255, 105, 180, 0.25);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  image-rendering: pixelated;
+}
+
+.skin-preview.swipe-left { transform: translateX(-12px); opacity: 0.6; }
+.skin-preview.swipe-right { transform: translateX(12px); opacity: 0.6; }
+
+.carousel-info {
   text-align: center;
-}
-
-.shop-card.owned { border-color: gold; }
-
-.skin-thumb, .goods-thumb {
   width: 100%;
-  height: 80px;
-  background-size: cover;
-  background-position: center;
-  border-radius: 8px;
-  margin-bottom: 8px;
-  background-color: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
-.goods-thumb {
-  background-image: url('../images/store/goods.png');
-  background-size: 500% 500%;
+.skin-name {
+  margin: 0;
+  color: #5a1a4a;
+  font-size: clamp(18px, 3.5vw, 24px);
+  font-weight: 800;
+}
+
+.skin-desc {
+  margin: 0;
+  color: #7a4a6a;
+  font-size: clamp(12px, 2.4vw, 14px);
+  min-height: 2.6em;
+  line-height: 1.3;
+  max-width: 360px;
+}
+
+.skin-price {
+  margin: 0;
+  color: #ff1493;
+  font-weight: 800;
+  font-size: clamp(16px, 3vw, 20px);
+}
+
+.skin-action {
+  margin-top: 6px;
+  min-width: 160px;
+}
+
+.skin-action.equipped {
+  background: gold;
+  color: #5a1a4a;
+  cursor: default;
+}
+
+.skin-action:disabled { opacity: 0.85; cursor: not-allowed; }
+
+.carousel-index {
+  margin: 0;
+  color: #b07399;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 520px) {
+  .skin-carousel { gap: 8px; padding: 12px; }
+  .carousel-arrow { width: 44px; height: 44px; font-size: 28px; }
+  .carousel-stage { padding: 14px 10px 12px; }
 }
 
 .btn-small {
@@ -328,6 +391,20 @@
   cursor: pointer;
   margin-top: 6px;
 }
+
+.btn-debug {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px dashed #b07399;
+  background: rgba(255,255,255,0.7);
+  color: #b07399;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.btn-debug:hover { background: #fff; color: #5a1a4a; }
 
 .leaderboard-list {
   list-style: none;
@@ -398,9 +475,9 @@ body[data-appScreen="title"] #titleScreen {
 
 .btn-hub-exit {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 30;
+  top: 64px;
+  left: 12px;
+  z-index: 60;
   padding: 8px 14px;
   border-radius: 12px;
   border: 2px solid #ff69b4;

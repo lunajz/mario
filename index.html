@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
   <link rel="stylesheet" href="css/style.css?v=20260523">
-  <link rel="stylesheet" href="css/hub.css?v=20260527">
+  <link rel="stylesheet" href="css/hub.css?v=20260527d">
 </head>
 <body>
   <section id="loginScreen" data-screen="login" class="app-screen">
@@ -81,21 +81,24 @@
   <section id="shopScreen" data-screen="shop" class="app-screen hidden shop-screen">
     <header class="sub-header">
       <button data-back-hub class="btn-back">返回</button>
-      <h2>商店</h2>
+      <h2>皮肤商店</h2>
       <span><span id="shopCoins">0</span> 🪙</span>
+      <button id="btnDebugCoins" class="btn-debug" type="button" title="测试用：+100 金币">+100 🪙</button>
     </header>
-    <div class="shop-tabs">
-      <button class="shop-tab active" data-cat="skins">皮肤</button>
-      <button class="shop-tab" data-cat="snacks">零食</button>
-      <button class="shop-tab" data-cat="trails">尾迹</button>
-      <button class="shop-tab" data-cat="splats">死亡特效</button>
-      <button class="shop-tab" data-cat="tricks">陷阱商品</button>
+    <div id="skinCarousel" class="skin-carousel" aria-roledescription="carousel">
+      <button id="skinPrev" class="carousel-arrow carousel-arrow-prev" aria-label="上一个">&#8249;</button>
+      <div class="carousel-stage">
+        <div id="skinPreview" class="skin-preview" role="img" aria-label="皮肤预览"></div>
+        <div class="carousel-info">
+          <h3 id="skinName" class="skin-name">—</h3>
+          <p id="skinDesc" class="skin-desc"></p>
+          <p id="skinPrice" class="skin-price"></p>
+          <button id="skinAction" class="btn-primary skin-action">购买</button>
+        </div>
+        <p id="skinIndex" class="carousel-index">1 / 1</p>
+      </div>
+      <button id="skinNext" class="carousel-arrow carousel-arrow-next" aria-label="下一个">&#8250;</button>
     </div>
-    <div class="shop-panel" data-cat="skins"><div class="shop-grid"></div></div>
-    <div class="shop-panel hidden" data-cat="snacks"><div class="shop-grid"></div></div>
-    <div class="shop-panel hidden" data-cat="trails"><div class="shop-grid"></div></div>
-    <div class="shop-panel hidden" data-cat="splats"><div class="shop-grid"></div></div>
-    <div class="shop-panel hidden" data-cat="tricks"><div class="shop-grid"></div></div>
   </section>
 
   <section id="leaderboardScreen" data-screen="leaderboard" class="app-screen hidden">
@@ -137,7 +140,7 @@
     </header>
     <div class="panel rules-panel">
       <p>失败只重试当前关卡。本关获得的金币在失败时清零，重试也不能再拿已收集的金币。</p>
-      <p>每关首次通关获得1颗星星，不可重复。至少3颗星星才能进入商店。</p>
+      <p>每关首次通关获得1颗星星，不可重复。商店里用金币购买皮肤。</p>
       <p>有其他玩家在线时，系统会随机匹配两人在同一关；碰到对方即失败。可送礼物或攻击。</p>
       <p>这是陷阱游戏——别相信任何看起来安全的东西。</p>
     </div>
@@ -183,7 +186,7 @@
         <button id="btnVictoryHub" class="btn-primary">返回地图</button>
       </div>
     </div>
-    <button id="btnHub" class="btn-hub-exit">地图</button>
+    <button id="btnHub" class="btn-hub-exit">返回大厅</button>
     <div id="touchControls">
       <div class="dpad">
         <button class="touch-btn" id="btnLeft">L</button>
@@ -202,9 +205,9 @@
   <script src="js/shop.js?v=20260523"></script>
   <script src="js/font.js?v=20260523"></script>
   <script src="js/audio.js?v=20260523"></script>
-  <script src="js/engine.js?v=20260523"></script>
+  <script src="js/engine.js?v=20260527b"></script>
   <script src="js/game.js?v=20260523"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
-  <script src="js/app.js?v=20260527"></script>
+  <script src="js/app.js?v=20260527e"></script>
 </body>
 </html>

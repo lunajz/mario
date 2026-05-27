@@ -6,6 +6,9 @@ const App = {
   settings: { music: true, lang: 'zh' },
   screen: 'login',
   API: 'api/',
+  _saveTimer: null,
+  _saveInFlight: false,
+  _saveQueued: false,
 
   t(key) {
     const table = {
@@ -21,7 +24,6 @@ const App = {
       profile: { zh: '个人中心', en: 'Profile' },
       rules: { zh: '规则', en: 'Rules' },
       back: { zh: '返回地图', en: 'Back to Map' },
-      stars_need: { zh: '需要3颗星星才能进入商店', en: 'Need 3 stars to unlock shop' },
       press_continue: { zh: '按空格或点击继续', en: 'Press Space or tap to continue' },
       controls_hint: { zh: '方向键/WASD移动，空格/W跳跃，E互动', en: 'Arrows/WASD move, Space/W jump, E interact' },
       touch_hint: { zh: '触屏使用屏幕按键；失败时点击任意处重试', en: 'Use touch buttons; tap anywhere to retry on death' },
@@ -168,6 +170,8 @@ const App = {
         stars: profile.stars || 0,
         maxLevel: profile.maxLevel ?? 0,
         currentLevel: profile.currentLevel ?? 0,
+        skin: profile.skin || 'skin_default',
+        owned: profile.owned || ['skin_default'],
         updated: Date.now(),
       }));
     } catch (e) { /* quota */ }
@@ -201,12 +205,22 @@ const App = {
     const merged = [];
     const len = Math.max(sLs.length, cLs.length, 20);
     for (let i = 0; i < len; i++) merged[i] = !!(sLs[i] || cLs[i]);
+    const sOwned = Array.isArray(server.owned) ? server.owned : [];
+    const cOwned = Array.isArray(cached.owned) ? cached.owned : [];
+    const mergedOwned = Array.from(new Set([...sOwned, ...cOwned]));
+    const cachedCoins = Number(cached.coins);
+    const serverCoins = Number(server.coins);
+    const cachedLevel = Number(cached.currentLevel);
+    const serverLevel = Number(server.currentLevel);
     const out = {
       ...server,
       levelStars: merged,
-      coins: Math.max(Number(server.coins) || 0, Number(cached.coins) || 0),
+      // Local-first: cached progress always wins over server snapshot when present.
+      coins: Number.isFinite(cachedCoins) ? cachedCoins : (Number.isFinite(serverCoins) ? serverCoins : 0),
       stars: merged.filter(Boolean).length,
-      currentLevel: Math.max(Number(server.currentLevel) || 0, Number(cached.currentLevel) || 0),
+      currentLevel: Number.isFinite(cachedLevel) ? cachedLevel : (Number.isFinite(serverLevel) ? serverLevel : 0),
+      owned: mergedOwned.length ? mergedOwned : (server.owned || ['skin_default']),
+      skin: cached.skin || server.skin || 'skin_default',
     };
     return this.normalizeProfile(out);
   },
@@ -228,13 +242,8 @@ const App = {
     return { profile, needsSync };
   },
 
-  async saveProfile() {
-    if (!this.profile?.token) return { ok: false };
-    this.syncMaxLevel(this.profile);
-    this.cacheProgress();
-    if (this.profile.token === 'demo_local_offline') return { ok: true };
-
-    const res = await this.api('leaderboard.php', {
+  getSavePayload() {
+    return {
       action: 'save',
       token: this.profile.token,
       stars: this.profile.stars,
@@ -246,12 +255,46 @@ const App = {
       owned: this.profile.owned,
       muteDev: this.profile.muteDev,
       achievements: this.profile.achievements,
-    });
-    if (res.ok && res.profile) {
-      this.profile = this.normalizeProfile({ ...this.profile, ...res.profile });
-      this.cacheProgress();
+    };
+  },
+
+  scheduleProfileUpload(delay = 900) {
+    if (!this.profile?.token || this.profile.token === 'demo_local_offline') return;
+    clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      this.flushProfileUpload();
+    }, delay);
+  },
+
+  async flushProfileUpload() {
+    if (!this.profile?.token || this.profile.token === 'demo_local_offline') return { ok: true, localOnly: true };
+    if (this._saveInFlight) {
+      this._saveQueued = true;
+      return { ok: true, queued: true };
     }
-    return res;
+    this._saveInFlight = true;
+    try {
+      const res = await this.api('leaderboard.php', this.getSavePayload());
+      if (this._saveQueued) {
+        this._saveQueued = false;
+        this.scheduleProfileUpload(150);
+      }
+      return res;
+    } finally {
+      this._saveInFlight = false;
+    }
+  },
+
+  async saveProfile(options = {}) {
+    if (!this.profile?.token) return { ok: false };
+    this.syncMaxLevel(this.profile);
+    this.cacheProgress();
+    if (this.profile.token === 'demo_local_offline') return { ok: true, localOnly: true };
+    if (options.immediate) {
+      return this.flushProfileUpload();
+    }
+    this.scheduleProfileUpload(options.delay ?? 900);
+    return { ok: true, queued: true };
   },
 
   countStars() {
@@ -377,7 +420,7 @@ const App = {
       if (!this.profile.nickname) this.profile.nickname = nick;
       if (!this.profile.token) this.profile.token = res.token;
       const { needsSync } = this.adoptProfile(this.profile, nick);
-      if (needsSync) await this.saveProfile();
+      if (needsSync) await this.saveProfile({ immediate: true });
       this.saveSession();
 
       if (options.skipIntro) {
@@ -525,10 +568,6 @@ const App = {
       this.startLevel(idx);
     });
     this.$('navShop')?.addEventListener('click', () => {
-      if (this.countStars() < 3) {
-        this.showToast(this.t('stars_need'));
-        return;
-      }
       this.showScreen('shop');
     });
     this.$('navRank')?.addEventListener('click', () => this.showScreen('leaderboard'));
@@ -613,94 +652,143 @@ const App = {
   },
 
   bindShop() {
-    document.querySelectorAll('.shop-tab').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.shop-tab').forEach((t) => t.classList.remove('active'));
-        tab.classList.add('active');
-        const cat = tab.dataset.cat;
-        document.querySelectorAll('.shop-panel').forEach((p) => {
-          p.classList.toggle('hidden', p.dataset.cat !== cat);
-        });
-      });
+    this.shopIndex = 0;
+    const skins = SHOP_CATALOG.skins || [];
+    const equippedIdx = skins.findIndex((s) => s.id === this.profile?.skin);
+    if (equippedIdx >= 0) this.shopIndex = equippedIdx;
+
+    this.$('skinPrev')?.addEventListener('click', () => this.shopStep(-1));
+    this.$('skinNext')?.addEventListener('click', () => this.shopStep(1));
+    this.$('skinAction')?.addEventListener('click', () => this.shopAction());
+    this.$('btnDebugCoins')?.addEventListener('click', () => this.debugAddCoins(100));
+
+    document.addEventListener('keydown', (e) => {
+      if (this.screen !== 'shop') return;
+      if (e.code === 'ArrowLeft') { e.preventDefault(); this.shopStep(-1); }
+      else if (e.code === 'ArrowRight') { e.preventDefault(); this.shopStep(1); }
+      else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); this.shopAction(); }
     });
+
+    const carousel = this.$('skinCarousel');
+    if (carousel) {
+      let startX = 0;
+      let active = false;
+      const SWIPE = 40;
+      carousel.addEventListener('touchstart', (e) => {
+        if (!e.touches[0]) return;
+        startX = e.touches[0].clientX;
+        active = true;
+      }, { passive: true });
+      carousel.addEventListener('touchend', (e) => {
+        if (!active) return;
+        active = false;
+        const endX = e.changedTouches[0]?.clientX ?? startX;
+        const dx = endX - startX;
+        if (dx <= -SWIPE) this.shopStep(1);
+        else if (dx >= SWIPE) this.shopStep(-1);
+      });
+    }
   },
 
   renderShop() {
     const coinsEl = this.$('shopCoins');
     if (coinsEl) coinsEl.textContent = this.profile?.coins || 0;
-    this.renderShopGrid('shopSkins', SHOP_CATALOG.skins, 'skins');
-    this.renderShopGrid('shopSnacks', SHOP_CATALOG.snacks, 'snacks');
-    this.renderShopGrid('shopTrails', SHOP_CATALOG.trails, 'trails');
-    this.renderShopGrid('shopSplats', SHOP_CATALOG.splats, 'splats');
-    this.renderShopGrid('shopTricks', SHOP_CATALOG.tricks, 'tricks');
-  },
 
-  renderShopGrid(containerId, items, type) {
-    const box = this.$('shopSkins') && type === 'skins' ? this.$('shopSkins')
-      : this.$('shopSnacks') && type === 'snacks' ? this.$('shopSnacks')
-      : this.$('shopTrails') && type === 'trails' ? this.$('shopTrails')
-      : this.$('shopSplats') && type === 'splats' ? this.$('shopSplats')
-      : this.$('shopTricks');
-    if (!box || box.dataset.cat !== type && box.id !== `shop${type.charAt(0).toUpperCase() + type.slice(1)}`) {
-      /* find by data-cat */
-    }
-    const el = document.querySelector(`.shop-panel[data-cat="${type}"] .shop-grid`);
-    if (!el) return;
-    el.innerHTML = '';
+    const skins = SHOP_CATALOG.skins || [];
+    if (!skins.length) return;
+    const total = skins.length;
+    if (this.shopIndex == null) this.shopIndex = 0;
+    this.shopIndex = ((this.shopIndex % total) + total) % total;
+    const item = skins[this.shopIndex];
+
     const lang = this.settings.lang;
-    const owned = this.profile?.owned || [];
+    const owned = (this.profile?.owned || []).includes(item.id);
+    const equipped = this.profile?.skin === item.id;
 
-    for (const item of items) {
-      const card = document.createElement('div');
-      card.className = 'shop-card';
-      if (owned.includes(item.id)) card.classList.add('owned');
-
-      if (type === 'skins' && item.grid) {
-        const thumb = document.createElement('div');
-        thumb.className = 'skin-thumb';
-        thumb.style.backgroundImage = 'url(images/store/skins.png)';
-        thumb.style.backgroundSize = '300% 300%';
-        thumb.style.backgroundPosition = `${item.grid[0] * 50}% ${item.grid[1] * 50}%`;
-        card.appendChild(thumb);
-      } else {
-        const thumb = document.createElement('div');
-        thumb.className = 'goods-thumb';
-        card.appendChild(thumb);
-      }
-
-      const name = item.name[lang] || item.name.zh;
-      const info = document.createElement('div');
-      info.innerHTML = `<h4>${name}</h4><p class="shop-price">${item.price} 🪙</p>`;
-      card.appendChild(info);
-      const btn = document.createElement('button');
-      btn.className = 'btn-small';
-      btn.textContent = owned.includes(item.id) ? (type === 'skins' ? '装备' : '已拥有') : '购买';
-      btn.addEventListener('click', () => this.buyItem(item.id, type));
-      card.appendChild(btn);
-      el.appendChild(card);
+    const preview = this.$('skinPreview');
+    if (preview && item.grid) {
+      preview.style.backgroundPosition = `${item.grid[0] * 50}% ${item.grid[1] * 50}%`;
     }
+
+    const nameEl = this.$('skinName');
+    if (nameEl) nameEl.textContent = item.name[lang] || item.name.zh || item.id;
+
+    const descEl = this.$('skinDesc');
+    if (descEl) descEl.textContent = item.desc ? (item.desc[lang] || item.desc.zh || '') : '';
+
+    const priceEl = this.$('skinPrice');
+    if (priceEl) {
+      priceEl.textContent = item.price > 0 ? `${item.price} 🪙` : '免费';
+    }
+
+    const actionEl = this.$('skinAction');
+    if (actionEl) {
+      actionEl.classList.remove('equipped');
+      actionEl.disabled = false;
+      if (equipped) {
+        actionEl.textContent = '已装备 ✓';
+        actionEl.classList.add('equipped');
+        actionEl.disabled = true;
+      } else if (owned) {
+        actionEl.textContent = '装备';
+      } else {
+        actionEl.textContent = `购买 ${item.price} 🪙`;
+      }
+    }
+
+    const idxEl = this.$('skinIndex');
+    if (idxEl) idxEl.textContent = `${this.shopIndex + 1} / ${total}`;
   },
 
-  async buyItem(id, type) {
-    const owned = this.profile?.owned || [];
-    if (owned.includes(id) && id !== 'fake_star') {
-      if (type === 'skins' || type === 'trails' || type === 'splats') {
-        await this.api('shop.php', { action: 'equip', token: this.profile.token, item: id });
-        this.profile.skin = id.startsWith('skin') ? id : this.profile.skin;
-        this.showToast('已装备');
-      }
-      return;
+  shopStep(delta) {
+    const skins = SHOP_CATALOG.skins || [];
+    if (!skins.length) return;
+    this.shopIndex = (((this.shopIndex || 0) + delta) % skins.length + skins.length) % skins.length;
+    const preview = this.$('skinPreview');
+    if (preview) {
+      const cls = delta > 0 ? 'swipe-left' : 'swipe-right';
+      preview.classList.add(cls);
+      setTimeout(() => preview.classList.remove(cls), 150);
     }
-    const res = await this.api('shop.php', { action: 'buy', token: this.profile.token, item: id });
-    if (!res.ok) { this.showToast(res.error || '购买失败'); return; }
-    if (res.troll) {
-      this.showToast('此物品已失去风味！变成了一块嚼过的灰色口香糖……');
-    } else {
-      this.showToast('购买成功！');
-    }
-    if (res.profile) this.profile = { ...this.profile, ...res.profile };
+    this.renderShop();
+  },
+
+  async shopAction() {
+    const skins = SHOP_CATALOG.skins || [];
+    const item = skins[this.shopIndex];
+    if (!item || !this.profile?.token) return;
+    const owned = (this.profile.owned || []).includes(item.id);
+    const equipped = this.profile.skin === item.id;
+    if (equipped) return;
+    const localRes = this.shopActionLocal(item, owned);
+    if (!localRes.ok) { this.showToast(localRes.error); return; }
+    this.showToast(owned ? '已装备' : '购买成功！');
     this.renderShop();
     this.saveProfile();
+  },
+
+  debugAddCoins(amount = 100) {
+    if (!this.profile) return;
+    this.profile.coins = (Number(this.profile.coins) || 0) + amount;
+    this.showToast(`+${amount} 🪙`);
+    this.renderShop();
+    this.saveProfile();
+  },
+
+  shopActionLocal(item, owned) {
+    if (owned) {
+      this.profile.skin = item.id;
+      return { ok: true };
+    }
+    const coins = Number(this.profile.coins) || 0;
+    const price = Number(item.price) || 0;
+    if (coins < price) return { ok: false, error: '金币不足' };
+    this.profile.coins = coins - price;
+    const ownedList = Array.isArray(this.profile.owned) ? [...this.profile.owned] : [];
+    if (!ownedList.includes(item.id)) ownedList.push(item.id);
+    this.profile.owned = ownedList;
+    this.profile.skin = item.id;
+    return { ok: true };
   },
 
   async loadLeaderboard() {

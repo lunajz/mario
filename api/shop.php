@@ -5,15 +5,15 @@ $input = array_merge($_GET, body());
 $action = $input['action'] ?? 'list';
 
 $ITEMS = [
-    'skin_fire' => ['price' => 200, 'cat' => 'skin', 'needStar' => 3],
-    'skin_snow' => ['price' => 250, 'cat' => 'skin', 'needStar' => 3],
-    'skin_green' => ['price' => 300, 'cat' => 'skin', 'needStar' => 3],
-    'skin_vintage' => ['price' => 150, 'cat' => 'skin', 'needStar' => 3],
+    'skin_fire' => ['price' => 200, 'cat' => 'skin', 'needStar' => 0],
+    'skin_snow' => ['price' => 250, 'cat' => 'skin', 'needStar' => 0],
+    'skin_green' => ['price' => 300, 'cat' => 'skin', 'needStar' => 0],
+    'skin_vintage' => ['price' => 150, 'cat' => 'skin', 'needStar' => 0],
     'skin_default' => ['price' => 0, 'cat' => 'skin', 'needStar' => 0],
-    'skin_star' => ['price' => 999, 'cat' => 'skin', 'needStar' => 3],
-    'skin_neon' => ['price' => 450, 'cat' => 'skin', 'needStar' => 3],
-    'skin_zombie' => ['price' => 400, 'cat' => 'skin', 'needStar' => 3],
-    'skin_cosmic' => ['price' => 500, 'cat' => 'skin', 'needStar' => 3],
+    'skin_star' => ['price' => 999, 'cat' => 'skin', 'needStar' => 0],
+    'skin_neon' => ['price' => 450, 'cat' => 'skin', 'needStar' => 0],
+    'skin_zombie' => ['price' => 400, 'cat' => 'skin', 'needStar' => 0],
+    'skin_cosmic' => ['price' => 500, 'cat' => 'skin', 'needStar' => 0],
     'trail_glitter' => ['price' => 120, 'cat' => 'trail', 'needStar' => 3],
     'trail_bubble' => ['price' => 100, 'cat' => 'trail', 'needStar' => 3],
     'trail_wrappers' => ['price' => 80, 'cat' => 'trail', 'needStar' => 3],
@@ -46,40 +46,40 @@ if ($action === 'buy') {
     if (!isset($ITEMS[$itemId])) respond(['ok' => false, 'error' => '商品不存在'], 400);
 
     $users = readJson('users.json');
-    $user = findUser($users, $token);
-    if (!$user) respond(['ok' => false, 'error' => '未登录'], 401);
+    $idx = findUserIndex($users, $token);
+    if ($idx === null) respond(['ok' => false, 'error' => '未登录'], 401);
 
-    $stars = intval($user['stars'] ?? 0);
-    $need = $ITEMS[$itemId]['needStar'] ?? 3;
-    if ($stars < $need) respond(['ok' => false, 'error' => '需要至少3颗星星才能进入商店'], 403);
+    $stars = intval($users[$idx]['stars'] ?? 0);
+    $need = $ITEMS[$itemId]['needStar'] ?? 0;
+    if ($stars < $need) respond(['ok' => false, 'error' => '需要至少' . $need . '颗星星才能购买此商品'], 403);
 
-    $owned = $user['owned'] ?? ['skin_default'];
+    $owned = $users[$idx]['owned'] ?? ['skin_default'];
     if (in_array($itemId, $owned, true) && $itemId !== 'fake_star') {
         respond(['ok' => false, 'error' => '已拥有'], 409);
     }
 
     $price = $ITEMS[$itemId]['price'];
-    $coins = intval($user['coins'] ?? 0);
+    $coins = intval($users[$idx]['coins'] ?? 0);
     if ($coins < $price) respond(['ok' => false, 'error' => '金币不足'], 402);
 
-    $user['coins'] = $coins - $price;
+    $users[$idx]['coins'] = $coins - $price;
     $troll = false;
     if ($itemId === 'fake_star') {
         $troll = true;
-        $ach = $user['achievements'] ?? [];
+        $ach = $users[$idx]['achievements'] ?? [];
         if (!in_array('chewed_gum', $ach, true)) $ach[] = 'chewed_gum';
-        $user['achievements'] = $ach;
+        $users[$idx]['achievements'] = $ach;
     } else {
         if (!in_array($itemId, $owned, true)) $owned[] = $itemId;
-        $user['owned'] = $owned;
+        $users[$idx]['owned'] = $owned;
         $cat = $ITEMS[$itemId]['cat'];
-        if ($cat === 'skin') $user['skin'] = $itemId;
-        if ($cat === 'trail') $user['trail'] = $itemId;
-        if ($cat === 'splat') $user['splat'] = $itemId;
-        if ($itemId === 'mute_dev') $user['muteDev'] = true;
+        if ($cat === 'skin') $users[$idx]['skin'] = $itemId;
+        if ($cat === 'trail') $users[$idx]['trail'] = $itemId;
+        if ($cat === 'splat') $users[$idx]['splat'] = $itemId;
+        if ($itemId === 'mute_dev') $users[$idx]['muteDev'] = true;
     }
     writeJson('users.json', $users);
-    $out = $user;
+    $out = $users[$idx];
     unset($out['password']);
     respond(['ok' => true, 'troll' => $troll, 'profile' => $out]);
 }
@@ -88,17 +88,17 @@ if ($action === 'equip') {
     $token = $input['token'] ?? '';
     $itemId = $input['item'] ?? '';
     $users = readJson('users.json');
-    $user = findUser($users, $token);
-    if (!$user) respond(['ok' => false, 'error' => '未登录'], 401);
-    $owned = $user['owned'] ?? [];
+    $idx = findUserIndex($users, $token);
+    if ($idx === null) respond(['ok' => false, 'error' => '未登录'], 401);
+    $owned = $users[$idx]['owned'] ?? [];
     if (!in_array($itemId, $owned, true)) respond(['ok' => false, 'error' => '未拥有'], 403);
     if (!isset($ITEMS[$itemId])) respond(['ok' => false, 'error' => '无效'], 400);
     $cat = $ITEMS[$itemId]['cat'];
-    if ($cat === 'skin') $user['skin'] = $itemId;
-    if ($cat === 'trail') $user['trail'] = $itemId;
-    if ($cat === 'splat') $user['splat'] = $itemId;
+    if ($cat === 'skin') $users[$idx]['skin'] = $itemId;
+    if ($cat === 'trail') $users[$idx]['trail'] = $itemId;
+    if ($cat === 'splat') $users[$idx]['splat'] = $itemId;
     writeJson('users.json', $users);
-    $out = $user;
+    $out = $users[$idx];
     unset($out['password']);
     respond(['ok' => true, 'profile' => $out]);
 }
