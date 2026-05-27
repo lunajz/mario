@@ -128,6 +128,13 @@ class GameEngine {
       moveDir: 1, meltTimer: 0, fakeTimer: 0,
     }));
 
+    this.movingPlatPos = {};
+    for (const p of this.platforms) {
+      if (p.type === 'moving') {
+        this.movingPlatPos[p.id] = this.createMovingPlatState(p);
+      }
+    }
+
     this.collectibles = (this.level.collectibles || []).map(c => ({ ...c, active: true, bob: Math.random() * Math.PI * 2 }));
     this.powerups = (this.level.powerups || []).map(p => ({ ...p, active: true, bob: Math.random() * Math.PI * 2 }));
     this.enemies = (this.level.enemies || []).map((e, i) => ({
@@ -142,7 +149,6 @@ class GameEngine {
 
     this.meltTimers = {};
     this.fakeTimers = {};
-    this.movingPlatPos = {};
     this.coinRewardsEnabled = true;
   }
 
@@ -207,6 +213,51 @@ class GameEngine {
     }
 
     return 'alive';
+  }
+
+  createMovingPlatState(p) {
+    const mp = { x: p.origX, y: p.origY, dir: 1 };
+    if (p.moveY && p.moveY.length === 2) {
+      mp.dir = p.origY >= p.moveY[1] ? -1 : (p.origY <= p.moveY[0] ? 1 : -1);
+    } else if (p.moveX && p.moveX.length === 2) {
+      mp.dir = p.origX <= p.moveX[0] ? 1 : (p.origX >= p.moveX[1] ? -1 : 1);
+    }
+    return mp;
+  }
+
+  updateMovingPlatforms(player, dt) {
+    const step = Math.max(dt, 1) / 16.667;
+    for (const p of this.platforms) {
+      if (p.type !== 'moving') continue;
+      const mp = this.movingPlatPos[p.id] || this.createMovingPlatState(p);
+      const prevX = mp.x;
+      const prevY = mp.y;
+
+      if (p.moveX) {
+        mp.x += p.speed * step * mp.dir;
+        if (mp.x < p.moveX[0]) { mp.x = p.moveX[0]; mp.dir = 1; }
+        else if (mp.x > p.moveX[1]) { mp.x = p.moveX[1]; mp.dir = -1; }
+      }
+      if (p.moveY) {
+        mp.y += p.speed * step * mp.dir;
+        if (mp.y < p.moveY[0]) { mp.y = p.moveY[0]; mp.dir = 1; }
+        else if (mp.y > p.moveY[1]) { mp.y = p.moveY[1]; mp.dir = -1; }
+      }
+
+      this.movingPlatPos[p.id] = mp;
+      const dx = mp.x - prevX;
+      const dy = mp.y - prevY;
+      if (player && (dx || dy) && this.isPlayerOnPlatform(player, p, prevX, prevY)) {
+        player.x += dx;
+        player.y += dy;
+      }
+    }
+  }
+
+  isPlayerOnPlatform(player, p, px, py) {
+    const feet = player.y + player.h;
+    if (Math.abs(feet - py) > 10) return false;
+    return player.x + player.w > px + 6 && player.x < px + p.w - 6;
   }
 
   resolveCollisionX(player) {
@@ -326,20 +377,7 @@ class GameEngine {
       return 'dead';
     }
 
-    // Moving platforms
-    for (const p of this.platforms) {
-      if (p.type !== 'moving') continue;
-      const mp = this.movingPlatPos[p.id] || { x: p.origX, y: p.origY, dir: 1 };
-      if (p.moveX) {
-        mp.x += p.speed * mp.dir;
-        if (mp.x <= p.moveX[0] || mp.x >= p.moveX[1]) mp.dir *= -1;
-      }
-      if (p.moveY) {
-        mp.y += p.speed * mp.dir;
-        if (mp.y <= p.moveY[0] || mp.y >= p.moveY[1]) mp.dir *= -1;
-      }
-      this.movingPlatPos[p.id] = mp;
-    }
+    // Moving platforms updated in updateMovingPlatforms() before player physics
 
     // Melting platforms
     for (const p of this.platforms) {

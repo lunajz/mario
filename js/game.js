@@ -217,6 +217,7 @@
     try {
       if (gameState === 'playing' && player) {
         engine.emitTrail(player);
+        engine.updateMovingPlatforms(player, dt);
         const pStatus = engine.updatePlayer(player, input, dt);
         const wStatus = engine.updateWorld(player, dt);
         engine.updateCamera(player);
