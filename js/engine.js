@@ -311,6 +311,14 @@ class GameEngine {
            a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
+  circleHitsPlayer(cx, cy, radius, player) {
+    const closestX = Math.max(player.x, Math.min(cx, player.x + player.w));
+    const closestY = Math.max(player.y, Math.min(cy, player.y + player.h));
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return dx * dx + dy * dy < radius * radius;
+  }
+
   updateWorld(player, dt) {
     this.levelTime += dt / 1000;
 
@@ -367,12 +375,10 @@ class GameEngine {
       }
     }
 
-    // Rollers
+    // Rollers — hitbox matches drawn circle at (r.x, r.y)
     for (const r of this.rollers) {
       r.angle += r.speed * 0.05 * r.dir;
-      const rx = r.x + Math.cos(r.angle) * 60;
-      const dist = Math.hypot(player.x + player.w / 2 - rx, player.y + player.h / 2 - r.y);
-      if (dist < r.r + 20 && player.invincible <= 0) return 'dead';
+      if (this.circleHitsPlayer(r.x, r.y, r.r * 0.88, player) && player.invincible <= 0) return 'dead';
     }
 
     // Enemies
