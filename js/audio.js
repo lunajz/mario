@@ -12,12 +12,51 @@ class GameAudio {
     this.bgmTimer = null;
     this.bgmStep = 0;
     this.currentLevel = 0;
+    this.resumeBgmAfterFocus = false;
     this.levelThemes = this._buildThemes();
+    this._bindFocusHandlers();
   }
 
   setEnabled(on) {
     this.enabled = on;
-    if (!on) this.stopBGM();
+    if (!on) {
+      this.resumeBgmAfterFocus = false;
+      this.stopBGM();
+    }
+  }
+
+  _bindFocusHandlers() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    window.addEventListener('blur', () => this._handleWindowFocus(false));
+    window.addEventListener('focus', () => this._handleWindowFocus(true));
+    document.addEventListener('visibilitychange', () => {
+      this._handleWindowFocus(!document.hidden);
+    });
+  }
+
+  async _handleWindowFocus(focused) {
+    if (!focused) {
+      if (this.bgmPlaying) {
+        this.resumeBgmAfterFocus = true;
+        this.stopBGM(false);
+      }
+      if (this.ctx && this.ctx.state === 'running') {
+        try { await this.ctx.suspend(); } catch (e) { /* ignore */ }
+      }
+      return;
+    }
+
+    if (!this.enabled) {
+      this.resumeBgmAfterFocus = false;
+      return;
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      try { await this.ctx.resume(); } catch (e) { /* ignore */ }
+    }
+    if (this.resumeBgmAfterFocus) {
+      this.resumeBgmAfterFocus = false;
+      this.startLevelBGM(this.currentLevel);
+    }
   }
 
   _buildThemes() {
@@ -83,8 +122,9 @@ class GameAudio {
 
   startBGM() { this.startLevelBGM(0); }
 
-  stopBGM() {
+  stopBGM(clearResumeFlag = true) {
     this.bgmPlaying = false;
+    if (clearResumeFlag) this.resumeBgmAfterFocus = false;
     if (this.bgmTimer) { clearTimeout(this.bgmTimer); this.bgmTimer = null; }
   }
 
