@@ -5,7 +5,7 @@ $input = array_merge($_GET, body());
 $action = $input['action'] ?? 'list';
 
 if ($action === 'list') {
-    $board = readJson('leaderboard.json');
+    $board = filterLeaderboardEntries(readJson('leaderboard.json'));
     usort($board, function ($a, $b) {
         if (($b['stars'] ?? 0) !== ($a['stars'] ?? 0)) return ($b['stars'] ?? 0) - ($a['stars'] ?? 0);
         return ($b['coins'] ?? 0) - ($a['coins'] ?? 0);
@@ -19,9 +19,9 @@ if ($action === 'save') {
     $idx = findUserIndex($users, $token);
     if ($idx === null) respond(['ok' => false, 'error' => '未登录'], 401);
 
-    $users[$idx]['stars'] = intval($input['stars'] ?? ($users[$idx]['stars'] ?? 0));
-    $users[$idx]['coins'] = intval($input['coins'] ?? ($users[$idx]['coins'] ?? 0));
     $users[$idx]['levelStars'] = normalizeLevelStars($input['levelStars'] ?? ($users[$idx]['levelStars'] ?? []));
+    $users[$idx]['stars'] = count(array_filter($users[$idx]['levelStars']));
+    $users[$idx]['coins'] = intval($input['coins'] ?? ($users[$idx]['coins'] ?? 0));
     $users[$idx]['maxLevel'] = intval($input['maxLevel'] ?? ($users[$idx]['maxLevel'] ?? 0));
     $users[$idx]['currentLevel'] = max(0, min(19, intval($input['currentLevel'] ?? ($users[$idx]['currentLevel'] ?? 0))));
     if (isset($input['skin'])) $users[$idx]['skin'] = $input['skin'];
@@ -33,26 +33,29 @@ if ($action === 'save') {
     writeJson('users.json', $users);
 
     $user = $users[$idx];
-    $board = readJson('leaderboard.json');
-    $found = false;
-    foreach ($board as &$row) {
-        if ($row['nickname'] === $user['nickname']) {
-            $row['stars'] = $user['stars'];
-            $row['coins'] = $user['coins'];
-            $row['maxLevel'] = $user['maxLevel'];
-            $row['updated'] = time();
-            $found = true;
-            break;
+    $board = filterLeaderboardEntries(readJson('leaderboard.json'));
+    if (!isDemoNickname($user['nickname'] ?? '')) {
+        $found = false;
+        foreach ($board as &$row) {
+            if ($row['nickname'] === $user['nickname']) {
+                $row['stars'] = $user['stars'];
+                $row['coins'] = $user['coins'];
+                $row['maxLevel'] = $user['maxLevel'];
+                $row['updated'] = time();
+                $found = true;
+                break;
+            }
         }
-    }
-    if (!$found) {
-        $board[] = [
-            'nickname' => $user['nickname'],
-            'stars' => $user['stars'],
-            'coins' => $user['coins'],
-            'maxLevel' => $user['maxLevel'],
-            'updated' => time(),
-        ];
+        unset($row);
+        if (!$found) {
+            $board[] = [
+                'nickname' => $user['nickname'],
+                'stars' => $user['stars'],
+                'coins' => $user['coins'],
+                'maxLevel' => $user['maxLevel'],
+                'updated' => time(),
+            ];
+        }
     }
     writeJson('leaderboard.json', $board);
     $out = $user;

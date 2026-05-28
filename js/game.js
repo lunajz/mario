@@ -125,7 +125,7 @@
     power_effect: { zh: '词条效果：{detail}', en: 'Effect: {detail}' },
     power_effect_active: { zh: '效果生效中', en: 'Effect active' },
     death_player: { zh: '碰到了其他玩家！', en: 'You bumped into another player!' },
-    death_default: { zh: '泡泡糖爆炸！点击任意处或按R重试', en: 'Bubble gum burst! Tap anywhere or press R to retry' },
+    death_default: { zh: '泡泡糖爆炸！点击任意处或按空格/R重试', en: 'Bubble gum burst! Tap anywhere or press Space/R to retry' },
     game_over_title: { zh: '再试一次!', en: 'Try Again!' },
     level_complete_title: { zh: '关卡完成!', en: 'Level Complete!' },
     level_complete_hint: { zh: '按空格或点击任意处继续', en: 'Press Space or tap anywhere to continue' },
@@ -841,6 +841,7 @@
     if (e.code === 'Space' && !e.repeat) {
       if (gameState === 'complete') { e.preventDefault(); nextLevel(); return; }
       if (gameState === 'victory') { e.preventDefault(); App?.returnToHub?.(); return; }
+      if (gameState === 'dead' && !snackOfferVisible) { e.preventDefault(); restartCurrentLevel(); return; }
     }
     if (gameState !== 'playing') return;
     const action = keyMap[e.code];
@@ -953,6 +954,7 @@
     get currentLevel() { return currentLevel; },
     get player() { return player; },
     get gameState() { return gameState; },
+    get bankCoins() { return bankCoins; },
   };
 
   if (window.__DEV_MODE__) {

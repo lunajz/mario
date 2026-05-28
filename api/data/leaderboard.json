@@ -1,12 +1,5 @@
 [
     {
-        "nickname": "demo",
-        "stars": 3,
-        "coins": 500,
-        "maxLevel": 3,
-        "updated": 1779973974
-    },
-    {
         "nickname": "chia",
         "stars": 20,
         "coins": 40,

@@ -513,6 +513,11 @@ const App = {
     this._saveInFlight = true;
     try {
       const res = await this.api('leaderboard.php', this.getSavePayload());
+      if (res?.ok && res.profile && this.profile) {
+        const token = this.profile.token;
+        this.profile = this.normalizeProfile({ ...this.profile, ...res.profile, token });
+        this.cacheProgress();
+      }
       if (this._saveQueued) {
         this._saveQueued = false;
         this.scheduleProfileUpload(150);
@@ -894,17 +899,23 @@ const App = {
   },
 
   onLevelComplete(levelIndex, levelCoins, newStar) {
+    if (!this.profile) return;
     if (newStar) {
       if (!this.profile.levelStars) this.profile.levelStars = [];
       this.profile.levelStars[levelIndex] = true;
-      this.profile.stars = this.countStars();
       this.profile.currentLevel = Math.min(levelIndex + 1, 19);
     } else {
       this.profile.currentLevel = levelIndex;
     }
+    if (typeof GameController?.bankCoins === 'number') {
+      this.profile.coins = GameController.bankCoins;
+    } else if (levelCoins > 0) {
+      this.profile.coins = (Number(this.profile.coins) || 0) + levelCoins;
+    }
+    this.profile.stars = this.countStars();
     this.syncMaxLevel(this.profile);
     this.cacheProgress();
-    this.saveProfile();
+    this.saveProfile({ immediate: true });
   },
 
   onLevelDeath() {

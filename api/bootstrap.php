@@ -69,6 +69,17 @@ function normalizeLevelStars($stars) {
     return $out;
 }
 
+function isDemoNickname($nickname) {
+    return strcasecmp(trim((string)$nickname), 'demo') === 0;
+}
+
+function filterLeaderboardEntries($board) {
+    if (!is_array($board)) return [];
+    return array_values(array_filter($board, function ($row) {
+        return !isDemoNickname($row['nickname'] ?? '');
+    }));
+}
+
 function defaultProfile($nick) {
     return [
         'nickname' => $nick,

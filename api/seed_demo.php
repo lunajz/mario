@@ -23,16 +23,6 @@ $profile['created'] = time();
 $users[] = $profile;
 writeJson('users.json', $users);
 
-$board = readJson('leaderboard.json');
-$board[] = [
-    'nickname' => 'demo',
-    'stars' => 3,
-    'coins' => 500,
-    'maxLevel' => 2,
-    'updated' => time(),
-];
-writeJson('leaderboard.json', $board);
-
 respond([
     'ok' => true,
     'message' => 'Demo account created',
