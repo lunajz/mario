@@ -474,13 +474,16 @@ class GameEngine {
           if (this.coinRewardsEnabled) {
             player.levelCoins = (player.levelCoins || 0) + 1;
           }
+          if (typeof gameAudio !== 'undefined') gameAudio.playCoin();
         } else {
           c.active = false;
           if (c.type === 'lumalee') {
-            this.applyPower(player, 1);
+            this.applyPower(player, 1, { playSound: false });
+            if (typeof gameAudio !== 'undefined') gameAudio.playCollectible('lumalee');
             player.invincible = 5000;
           } else if (c.type === 'question') {
-            this.applyPower(player, Math.floor(Math.random() * 8));
+            this.applyPower(player, Math.floor(Math.random() * 8), { playSound: false });
+            if (typeof gameAudio !== 'undefined') gameAudio.playCollectible('question');
           }
           this.spawnParticles(c.x + 14, cy + 14, '#ffd700', 8);
         }
@@ -531,11 +534,13 @@ class GameEngine {
     return true;
   }
 
-  applyPower(player, type) {
+  applyPower(player, type, options = {}) {
+    const { playSound = true } = options;
     if (type === -1) {
       if (this.coinRewardsEnabled) {
         player.levelCoins = (player.levelCoins || 0) + 1;
       }
+      if (typeof gameAudio !== 'undefined') gameAudio.playCoin();
       return;
     }
     player.powerType = type;
@@ -557,6 +562,7 @@ class GameEngine {
       case 6: player.highJump = true; break;
       case 7: player.canGlide = true; break;
     }
+    if (playSound && typeof gameAudio !== 'undefined') gameAudio.playPowerup(type);
   }
 
   clearPower(player) {

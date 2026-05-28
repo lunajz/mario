@@ -110,6 +110,59 @@ class GameAudio {
     this.tone(160, 0.14, { type: 'sine', volume: 0.38, freqEnd: 480 });
     this.tone(480, 0.1, { volume: 0.18, delay: 0.06, freqEnd: 640 });
   }
+  playCoin() {
+    this.tone(988, 0.07, { type: 'square', volume: 0.18, freqEnd: 1318 });
+    this.tone(1568, 0.09, { type: 'triangle', volume: 0.16, delay: 0.04, freqEnd: 1760 });
+  }
+  playCollectible(kind) {
+    if (kind === 'lumalee') {
+      this.tone(740, 0.11, { type: 'triangle', volume: 0.17, freqEnd: 880 });
+      this.tone(988, 0.1, { type: 'sine', volume: 0.14, delay: 0.05, freqEnd: 1175 });
+    } else if (kind === 'question') {
+      this.tone(392, 0.08, { type: 'square', volume: 0.16, freqEnd: 494 });
+      this.tone(622, 0.09, { type: 'triangle', volume: 0.15, delay: 0.05, freqEnd: 740 });
+    }
+  }
+  playPowerup(type) {
+    switch (type) {
+      case 0: // 超级皇冠 - 短暂无敌
+        [784, 988, 1175].forEach((f, i) => this.tone(f, 0.09, { type: 'triangle', volume: 0.16, delay: i * 0.04 }));
+        break;
+      case 1: // 耀西蛋 - 额外生命
+        this.tone(523, 0.1, { type: 'sine', volume: 0.15, freqEnd: 659 });
+        this.tone(784, 0.13, { type: 'triangle', volume: 0.16, delay: 0.06, freqEnd: 988 });
+        break;
+      case 2: // 心之花 - 恢复生命
+        this.tone(466, 0.11, { type: 'sine', volume: 0.15, freqEnd: 554 });
+        this.tone(698, 0.14, { type: 'sine', volume: 0.14, delay: 0.07, freqEnd: 831 });
+        break;
+      case 3: // 火焰花 - 火焰强化
+        this.tone(330, 0.1, { type: 'sawtooth', volume: 0.16, freqEnd: 523 });
+        this.tone(622, 0.12, { type: 'square', volume: 0.14, delay: 0.06, freqEnd: 698 });
+        break;
+      case 4: // 紫蘑菇 - 变大
+        this.tone(262, 0.14, { type: 'square', volume: 0.16, freqEnd: 330 });
+        this.tone(392, 0.12, { type: 'triangle', volume: 0.14, delay: 0.08, freqEnd: 440 });
+        break;
+      case 5: // 加速蘑菇 - 速度提升
+        this.tone(659, 0.07, { type: 'square', volume: 0.14, freqEnd: 988 });
+        this.tone(988, 0.07, { type: 'square', volume: 0.13, delay: 0.03, freqEnd: 1318 });
+        this.tone(1318, 0.07, { type: 'triangle', volume: 0.12, delay: 0.06, freqEnd: 1568 });
+        break;
+      case 6: // 高跳蘑菇 - 跳跃强化
+        this.tone(349, 0.08, { type: 'triangle', volume: 0.14, freqEnd: 523 });
+        this.tone(523, 0.1, { type: 'triangle', volume: 0.14, delay: 0.05, freqEnd: 784 });
+        this.tone(784, 0.11, { type: 'sine', volume: 0.13, delay: 0.1, freqEnd: 1047 });
+        break;
+      case 7: // Peachette - 滑翔
+        this.tone(440, 0.16, { type: 'sine', volume: 0.13, freqEnd: 523 });
+        this.tone(659, 0.2, { type: 'triangle', volume: 0.13, delay: 0.08, freqEnd: 740 });
+        break;
+      default:
+        this.tone(523, 0.1, { type: 'triangle', volume: 0.14, freqEnd: 659 });
+        break;
+    }
+  }
 
   startLevelBGM(level) {
     this.currentLevel = level;
