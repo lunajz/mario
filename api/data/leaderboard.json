@@ -1,16 +1,16 @@
 [
     {
-        "nickname": "chia",
-        "stars": 20,
-        "coins": 40,
-        "maxLevel": 19,
-        "updated": 1779937050
-    },
-    {
         "nickname": "jz",
         "stars": 3,
         "coins": 0,
         "maxLevel": 3,
         "updated": 1779721107
+    },
+    {
+        "nickname": "chiachia",
+        "stars": 2,
+        "coins": 5,
+        "maxLevel": 2,
+        "updated": 1779974418
     }
 ]
