@@ -353,6 +353,7 @@ const App = {
     this.bindShop();
     this.bindSettings();
     this.bindLore();
+    this.bindGlobalHotkeys();
     this.loadSettings();
 
     const session = JSON.parse(localStorage.getItem('bgf_session') || 'null');
@@ -589,6 +590,18 @@ const App = {
     this.$('navRules')?.addEventListener('click', () => this.showScreen('rules'));
     document.querySelectorAll('[data-back-hub]').forEach((b) => {
       b.addEventListener('click', () => this.showScreen('hub'));
+    });
+  },
+
+  bindGlobalHotkeys() {
+    const hubBackScreens = new Set(['shop', 'leaderboard', 'settings', 'profile', 'rules']);
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'Escape' || e.defaultPrevented) return;
+      // In-game Escape is handled by GameController.
+      if (document.body.dataset.appScreen === 'game') return;
+      if (!hubBackScreens.has(this.screen)) return;
+      e.preventDefault();
+      this.showScreen('hub');
     });
   },
 

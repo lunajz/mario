@@ -224,7 +224,7 @@
     if ($('gameOverMsg')) {
       $('gameOverMsg').textContent = reason === 'player'
         ? '碰到了其他玩家！'
-        : '泡泡糖爆炸！点击任意处或按空格重试';
+        : '泡泡糖爆炸！点击任意处或按空格/R重试';
     }
     updateHUD();
   }
@@ -306,6 +306,13 @@
     if (e.code === 'Escape' && gameState !== 'idle') {
       e.preventDefault();
       returnToHubFromGame();
+      return;
+    }
+    if (e.code === 'KeyR' && !e.repeat && gameState !== 'idle') {
+      e.preventDefault();
+      const wasDead = gameState === 'dead';
+      restartCurrentLevel();
+      if (!wasDead) App?.showToast?.('已按 R 重试当前关卡');
       return;
     }
     if (e.code === 'Space' && !e.repeat) {
