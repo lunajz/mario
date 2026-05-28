@@ -19,10 +19,34 @@
   let animTimer = null;
   let earnedStar = false;
   let imagesReady = false;
+  let snackPanelOpen = false;
+  let levelSnackUnlocked = {};
+  let activeSnackId = null;
+  let blockedPowerupToastAt = 0;
+  let snackListBuilt = false;
   let readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
   const POWERUP_ICONS = ['👑', '🥚', '💖', '🔥', '🍄', '⚡', '⬆️', '🪽'];
   const POWER_NOTICE_MIN_MS = 100;
+  const SNACK_LEVEL_DURATION = 24 * 60 * 60 * 1000;
+  const SNACK_TO_POWER_TYPE = {
+    snack_bullet: 5,
+    snack_block: 3,
+    snack_waffle: 7,
+    snack_locket: 0,
+    snack_goomba: 2,
+    snack_flower: 4,
+    snack_soda: 5,
+    snack_yoshi: 6,
+    snack_pasta: 1,
+    snack_mushroom: 4,
+    snack_star: 0,
+    snack_shy: 6,
+  };
+  const SNACK_LIST = (typeof SHOP_CATALOG !== 'undefined' && Array.isArray(SHOP_CATALOG.snacks))
+    ? SHOP_CATALOG.snacks
+    : [];
+  const SNACK_BY_ID = Object.fromEntries(SNACK_LIST.map((s) => [s.id, s]));
   const POWERUP_SPRITE_POS = [
     '0% 0%',
     '33.333% 0%',
@@ -49,6 +73,127 @@
 
   function show(el) { if (el) el.classList.remove('hidden'); }
   function hide(el) { if (el) el.classList.add('hidden'); }
+  function snackName(snackId) {
+    return SNACK_BY_ID[snackId]?.name?.zh || snackId || '未知零食';
+  }
+
+  function snackEffectText(snackId) {
+    const powerType = SNACK_TO_POWER_TYPE[snackId];
+    if (typeof powerType !== 'number') return '词条效果';
+    const fullName = (typeof POWERUP_NAMES !== 'undefined' && POWERUP_NAMES[powerType])
+      ? POWERUP_NAMES[powerType]
+      : `效果 ${powerType + 1}`;
+    const [, effectDetailRaw] = String(fullName).split(' - ');
+    return (effectDetailRaw || fullName || '词条效果').trim();
+  }
+
+  function applySnackEffectToPlayer(snackId) {
+    if (!player) return;
+    const powerType = SNACK_TO_POWER_TYPE[snackId];
+    if (typeof powerType !== 'number') return;
+    engine.applyPower(player, powerType, { source: 'snack' });
+    player.powerTimer = SNACK_LEVEL_DURATION;
+  }
+
+  function deactivateSnackEffect({ silent = false } = {}) {
+    activeSnackId = null;
+    if (player?.powerSource === 'snack') engine.clearPower(player);
+    if (!silent) App?.showToast?.('已关闭零食效果');
+    updateSnackPanel();
+    updateHUD();
+  }
+
+  function activateSnack(snackId, options = {}) {
+    const { skipCost = false, silent = false } = options;
+    const snack = SNACK_BY_ID[snackId];
+    if (!snack || !profile) return false;
+    if (!levelSnackUnlocked[snackId] && !skipCost) {
+      const price = Number(snack.price) || 0;
+      if ((profile.coins || 0) < price) {
+        App?.showToast?.('金币不足');
+        return false;
+      }
+      profile.coins -= price;
+      bankCoins = profile.coins;
+      levelSnackUnlocked[snackId] = true;
+      App?.saveProfile?.();
+    } else if (skipCost) {
+      levelSnackUnlocked[snackId] = true;
+    }
+    activeSnackId = snackId;
+    applySnackEffectToPlayer(snackId);
+    if (!silent) App?.showToast?.('零食生效，期间不会捡起 Power-up');
+    updateSnackPanel();
+    updateHUD();
+    return true;
+  }
+
+  function setSnackPanelOpen(open) {
+    snackPanelOpen = !!open;
+    const panel = $('snackPanel');
+    if (panel) panel.classList.toggle('hidden', !snackPanelOpen);
+  }
+
+  function toggleSnackPanel() {
+    setSnackPanelOpen(!snackPanelOpen);
+  }
+
+  function buildSnackPanelList() {
+    const box = $('snackList');
+    if (!box || snackListBuilt) return;
+    snackListBuilt = true;
+    box.innerHTML = '';
+    for (const snack of SNACK_LIST) {
+      const row = document.createElement('div');
+      row.className = 'snack-item';
+      row.dataset.snack = snack.id;
+      const left = document.createElement('div');
+      left.innerHTML = `
+        <div class="snack-item-title">${snack.name?.zh || snack.id}</div>
+        <div class="snack-item-sub">${snack.price} 🪙 · ${snackEffectText(snack.id)}</div>
+      `;
+      const btn = document.createElement('button');
+      btn.className = 'snack-item-btn';
+      btn.dataset.snack = snack.id;
+      btn.type = 'button';
+      btn.addEventListener('click', () => {
+        if (activeSnackId === snack.id) {
+          deactivateSnackEffect({ silent: true });
+          return;
+        }
+        activateSnack(snack.id);
+      });
+      row.appendChild(left);
+      row.appendChild(btn);
+      box.appendChild(row);
+    }
+  }
+
+  function updateSnackPanel() {
+    const coinsEl = $('snackCoins');
+    if (coinsEl) coinsEl.textContent = String(profile?.coins ?? bankCoins ?? 0);
+    const activeEl = $('snackActiveLabel');
+    if (activeEl) activeEl.textContent = activeSnackId ? `当前：${snackName(activeSnackId)}` : '当前：未激活';
+    const box = $('snackList');
+    if (!box) return;
+    box.querySelectorAll('.snack-item-btn').forEach((btn) => {
+      const snackId = btn.dataset.snack;
+      const snack = SNACK_BY_ID[snackId];
+      if (!snack) return;
+      const unlocked = !!levelSnackUnlocked[snackId];
+      const active = activeSnackId === snackId;
+      btn.classList.remove('active', 'unlocked');
+      if (active) {
+        btn.classList.add('active');
+        btn.textContent = '关闭效果';
+      } else if (unlocked) {
+        btn.classList.add('unlocked');
+        btn.textContent = '使用（已解锁）';
+      } else {
+        btn.textContent = `购买并使用 ${snack.price} 🪙`;
+      }
+    });
+  }
 
   function totalDisplay() {
     return bankCoins + levelCoins;
@@ -74,6 +219,7 @@
     } else if (mp) {
       mp.classList.add('hidden');
     }
+    updateSnackPanel();
   }
 
   function updatePowerNotice(allowShow = true) {
@@ -105,6 +251,14 @@
       ? `${Math.ceil(remainMs / 1000)}s`
       : `${Math.max(0.1, remainMs / 1000).toFixed(1)}s`;
     const isRandom = player.powerSource === 'random';
+    if (player.powerSource === 'snack' && activeSnackId) {
+      mainEl.textContent = `当前零食：${snackName(activeSnackId)}`;
+      detailEl.textContent = '零食生效中，未拾取 Power-up';
+      iconEl.classList.remove('sprite');
+      iconEl.style.backgroundPosition = '';
+      iconEl.textContent = '🍬';
+      return;
+    }
     mainEl.textContent = `${isRandom ? '随机加成' : '当前加成'}：${shortName}（${remainText}）`;
     detailEl.textContent = `词条效果：${effectDetail || '效果生效中'}`;
     const spritePos = POWERUP_SPRITE_POS[player.powerType];
@@ -137,6 +291,12 @@
 
   function startLevel(levelIndex, fresh = true) {
     resetInputState();
+    if (fresh) {
+      levelSnackUnlocked = {};
+      activeSnackId = null;
+      blockedPowerupToastAt = 0;
+      setSnackPanelOpen(false);
+    }
     currentLevel = levelIndex;
     if (fresh) levelCoins = 0;
     const ld = LEVEL_DATA[currentLevel];
@@ -145,6 +305,9 @@
     player = engine.createPlayer(ld.spawn);
     player.levelCoins = 0;
     applyProfile(profile);
+    if (!fresh && activeSnackId) {
+      applySnackEffectToPlayer(activeSnackId);
+    }
     player.displayCoins = totalDisplay;
     gameState = 'playing';
     earnedStar = false;
@@ -224,7 +387,7 @@
     if ($('gameOverMsg')) {
       $('gameOverMsg').textContent = reason === 'player'
         ? '碰到了其他玩家！'
-        : '泡泡糖爆炸！点击任意处或按空格/R重试';
+        : '泡泡糖爆炸！点击任意处或按R重试';
     }
     updateHUD();
   }
@@ -276,7 +439,16 @@
         engine.emitTrail(player);
         engine.updateMovingPlatforms(player, dt);
         const pStatus = engine.updatePlayer(player, input, dt);
-        const wStatus = engine.updateWorld(player, dt);
+        const wStatus = engine.updateWorld(player, dt, {
+          shouldBlockPowerupPickup: () => !!activeSnackId,
+          onPowerupBlocked: () => {
+            const now = performance.now();
+            if (now - blockedPowerupToastAt > 1200) {
+              blockedPowerupToastAt = now;
+              App?.showToast?.('零食生效中，未拾取 Power-up');
+            }
+          },
+        });
         engine.updateCamera(player);
         updateHUD();
         if (pStatus === 'dead' || wStatus === 'dead') onDeath();
@@ -303,8 +475,17 @@
 
   window.addEventListener('keydown', (e) => {
     unlockAudio();
+    if (e.code === 'KeyQ' && !e.repeat && gameState === 'playing') {
+      e.preventDefault();
+      toggleSnackPanel();
+      return;
+    }
     if (e.code === 'Escape' && gameState !== 'idle') {
       e.preventDefault();
+      if (snackPanelOpen) {
+        setSnackPanelOpen(false);
+        return;
+      }
       returnToHubFromGame();
       return;
     }
@@ -317,7 +498,6 @@
     }
     if (e.code === 'Space' && !e.repeat) {
       if (gameState === 'complete') { e.preventDefault(); nextLevel(); return; }
-      if (gameState === 'dead') { e.preventDefault(); restartCurrentLevel(); return; }
       if (gameState === 'victory') { e.preventDefault(); App?.returnToHub?.(); return; }
     }
     if (gameState !== 'playing') return;
@@ -352,6 +532,9 @@
   function returnToHubFromGame() {
     gameState = 'idle';
     resetInputState();
+    levelSnackUnlocked = {};
+    activeSnackId = null;
+    setSnackPanelOpen(false);
     gameAudio?.stopBGM();
     updatePowerNotice(false);
     App?.returnToHub?.();
@@ -361,6 +544,8 @@
   $('btnRetry')?.addEventListener('click', () => restartCurrentLevel());
   $('btnHub')?.addEventListener('click', () => returnToHubFromGame());
   $('btnVictoryHub')?.addEventListener('click', () => App?.returnToHub?.());
+  $('btnSnackPanel')?.addEventListener('click', () => toggleSnackPanel());
+  $('btnSnackClose')?.addEventListener('click', () => setSnackPanelOpen(false));
 
   $('gameOver')?.addEventListener('click', () => {
     if (gameState === 'dead') restartCurrentLevel();
@@ -387,6 +572,8 @@
     engine.resize();
     await engine.loadImages();
     imagesReady = true;
+    buildSnackPanelList();
+    setSnackPanelOpen(false);
 
     player = engine.createPlayer({ x: 80, y: 460 });
     engine.initLevel(LEVEL_DATA[0], 0);

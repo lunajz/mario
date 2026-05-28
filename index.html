@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
-  <link rel="stylesheet" href="css/style.css?v=20260528j">
+  <link rel="stylesheet" href="css/style.css?v=20260528k">
   <link rel="stylesheet" href="css/hub.css?v=20260528d">
 </head>
 <body>
@@ -195,6 +195,18 @@
       <button id="btnMpGift" class="btn-small">送礼</button>
       <button id="btnMpAttack" class="btn-small">攻击</button>
     </div>
+    <button id="btnSnackPanel" class="btn-snack-toggle" type="button">零食(Q)</button>
+    <div id="snackPanel" class="snack-panel hidden">
+      <div class="snack-panel-head">
+        <h3>零食词条（局内） · <span id="snackCoins">0</span> 🪙</h3>
+        <button id="btnSnackClose" class="btn-small" type="button">关闭</button>
+      </div>
+      <p class="snack-tip">局内零食词条（一次仅生效一个）</p>
+      <div id="snackList" class="snack-list"></div>
+      <div class="snack-panel-foot">
+        <span id="snackActiveLabel">当前：未激活</span>
+      </div>
+    </div>
     <div id="levelComplete" class="overlay hidden">
       <div class="panel star-burst">
         <h2>关卡完成!</h2>
@@ -208,7 +220,7 @@
       <div class="panel splat-panel">
         <div class="splat-blob"></div>
         <h2>再试一次!</h2>
-        <p id="gameOverMsg">点击任意处或按空格重试</p>
+        <p id="gameOverMsg">点击任意处或按R重试</p>
       </div>
     </div>
     <div id="victory" class="overlay hidden">
@@ -237,8 +249,8 @@
   <script src="js/levels.js?v=20260527k"></script>
   <script src="js/shop.js?v=20260523"></script>
   <script src="js/audio.js?v=20260523"></script>
-  <script src="js/engine.js?v=20260528b"></script>
-  <script src="js/game.js?v=20260528e"></script>
+  <script src="js/engine.js?v=20260528d"></script>
+  <script src="js/game.js?v=20260528j"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
   <script src="js/app.js?v=20260528g"></script>
 </body>

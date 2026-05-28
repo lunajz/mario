@@ -373,7 +373,7 @@ class GameEngine {
     return dx * dx + dy * dy < radius * radius;
   }
 
-  updateWorld(player, dt) {
+  updateWorld(player, dt, options = {}) {
     this.levelTime += dt / 1000;
 
     if (this.level.timeLimit && this.levelTime > this.level.timeLimit) {
@@ -479,6 +479,16 @@ class GameEngine {
           }
           if (typeof gameAudio !== 'undefined') gameAudio.playCoin();
         } else {
+          const blocked = typeof options.shouldBlockPowerupPickup === 'function'
+            ? !!options.shouldBlockPowerupPickup(c.type)
+            : !!options.blockPowerupPickup;
+          if (blocked) {
+            if (typeof options.onPowerupBlocked === 'function') {
+              options.onPowerupBlocked(c.type);
+            }
+            c.bob += dt * 0.003;
+            continue;
+          }
           c.active = false;
           if (c.type === 'lumalee') {
             this.applyPower(player, 1, { playSound: false, source: 'lumalee' });
@@ -499,6 +509,16 @@ class GameEngine {
       if (!p.active) continue;
       const py = p.y + Math.sin(p.bob + this.levelTime * 2) * 4;
       if (this.aabb(player, { x: p.x, y: py, w: 36, h: 36 })) {
+        const blocked = typeof options.shouldBlockPowerupPickup === 'function'
+          ? !!options.shouldBlockPowerupPickup(p.type)
+          : !!options.blockPowerupPickup;
+        if (blocked) {
+          if (typeof options.onPowerupBlocked === 'function') {
+            options.onPowerupBlocked(p.type);
+          }
+          p.bob += dt * 0.002;
+          continue;
+        }
         p.active = false;
         this.applyPower(player, p.type, { source: 'pickup' });
         this.spawnParticles(p.x + 18, py + 18, '#ff69b4', 12);

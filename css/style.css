@@ -130,6 +130,109 @@ html, body {
   opacity: 0.78;
 }
 
+.btn-snack-toggle {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  z-index: 56;
+  border: 2px solid #ff69b4;
+  background: rgba(255, 182, 217, 0.95);
+  color: #5a1a4a;
+  font-weight: 800;
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.snack-panel {
+  position: absolute;
+  top: 108px;
+  right: 12px;
+  width: min(420px, 92vw);
+  max-height: min(58vh, 520px);
+  overflow: auto;
+  z-index: 57;
+  border: 2px solid #ff69b4;
+  border-radius: 14px;
+  background: rgba(58, 20, 56, 0.92);
+  color: #ffe8f5;
+  padding: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.snack-panel.hidden {
+  display: none;
+}
+.snack-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.snack-panel-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.snack-tip {
+  margin: 8px 0 10px;
+  font-size: 12px;
+  color: #ffd9ec;
+}
+.snack-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.snack-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 182, 217, 0.45);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.snack-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.snack-item-sub {
+  font-size: 11px;
+  color: #ffd3eb;
+}
+.snack-item-btn {
+  border: 1px solid #ff9ecf;
+  color: #fff;
+  background: rgba(255, 105, 180, 0.9);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.snack-item-btn.unlocked {
+  background: rgba(80, 200, 120, 0.85);
+  border-color: #8af0ac;
+}
+.snack-item-btn.active {
+  background: gold;
+  color: #5a1a4a;
+  border-color: #ffe58a;
+}
+.snack-panel-foot {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+#snackActiveLabel {
+  font-size: 12px;
+  color: #ffe8f5;
+}
+
 .hud-left, .hud-right {
   background: rgba(255, 182, 217, 0.85);
   border: 2px solid #ff69b4;
