@@ -16,12 +16,28 @@ const App = {
 
   t(key) {
     const table = {
+      game_title: { zh: '马里奥的黏腻处境', en: "Mario's Sticky Situation" },
+      game_subtitle: { zh: "Mario's Sticky Situation", en: '马里奥的黏腻处境' },
       login_title: { zh: '登录 / 注册', en: 'Login / Register' },
       nickname: { zh: '昵称', en: 'Nickname' },
       password: { zh: '密码', en: 'Password' },
       login: { zh: '登录', en: 'Login' },
       register: { zh: '注册', en: 'Register' },
+      demo_login: { zh: '一键登录 Demo', en: 'Quick Login Demo' },
+      logging_in: { zh: '登录中…', en: 'Logging in…' },
+      err_need_credentials: { zh: '请输入昵称和密码', en: 'Please enter nickname and password' },
+      err_login_failed: { zh: '登录失败', en: 'Login failed' },
+      err_register_failed: { zh: '注册失败', en: 'Registration failed' },
+      err_nick_taken: { zh: '昵称已被使用', en: 'Nickname already taken' },
+      err_login_unknown: { zh: '未知错误', en: 'Unknown error' },
       hub: { zh: '泡泡糖山谷地图', en: 'Hubba-Dubba Map' },
+      hub_title: { zh: '泡泡糖山谷', en: 'Hubba-Dubba Valley' },
+      continue_level: { zh: '继续第 {n} 关', en: 'Continue Level {n}' },
+      hub_welcome: { zh: '欢迎，{name}！', en: 'Welcome, {name}!' },
+      player_default: { zh: '玩家', en: 'Player' },
+      hub_locked_level: { zh: '请先完成前面的关卡', en: 'Complete earlier levels first' },
+      game_not_ready: { zh: '游戏未初始化', en: 'Game not initialized' },
+      online_badge: { zh: '{n} 在线', en: '{n} online' },
       shop: { zh: '商店', en: 'Shop' },
       rank: { zh: '排行榜', en: 'Leaderboard' },
       settings: { zh: '设置', en: 'Settings' },
@@ -29,11 +45,26 @@ const App = {
       rules: { zh: '规则', en: 'Rules' },
       back: { zh: '返回地图', en: 'Back to Map' },
       press_continue: { zh: '按空格或点击继续', en: 'Press Space or tap to continue' },
+      controls_title: { zh: '操作说明', en: 'Controls' },
+      controls_pc_label: { zh: '电脑:', en: 'PC:' },
+      controls_pc_text: { zh: '方向键 / WASD 移动，空格 / W 跳跃，E 互动', en: 'Arrows / WASD to move, Space / W to jump, E to interact' },
+      controls_touch_label: { zh: '手机 / iPad:', en: 'Mobile / iPad:' },
+      controls_touch_text: { zh: '使用屏幕虚拟按键；失败时点击任意处重试', en: 'Use on-screen buttons; tap anywhere to retry after death' },
+      controls_enter_hint: { zh: '按空格或点击下方按钮进入地图', en: 'Press Space or tap the button below to enter the map' },
+      enter_hub: { zh: '进入泡泡糖山谷', en: 'Enter Hubba-Dubba Valley' },
       controls_hint: { zh: '方向键/WASD移动，空格/W跳跃，E互动', en: 'Arrows/WASD move, Space/W jump, E interact' },
       touch_hint: { zh: '触屏使用屏幕按键；失败时点击任意处重试', en: 'Use touch buttons; tap anywhere to retry on death' },
     };
     const lang = this.settings.lang;
     return table[key]?.[lang] || table[key]?.zh || key;
+  },
+
+  tFormat(key, vars = {}) {
+    let text = this.t(key);
+    Object.entries(vars).forEach(([k, v]) => {
+      text = text.replaceAll(`{${k}}`, String(v));
+    });
+    return text;
   },
 
   parseApiResponse(text) {
@@ -85,6 +116,90 @@ const App = {
     if (btn) btn.classList.toggle('hidden', !this.isDemoUser());
   },
 
+  setLanguage(lang) {
+    const next = lang === 'en' ? 'en' : 'zh';
+    this.settings.lang = next;
+    this.settings.langChosen = true;
+    this.saveSettings();
+    this.applyUiLanguage();
+  },
+
+  syncLangToggle() {
+    const zhBtn = this.$('langBtnZh');
+    const enBtn = this.$('langBtnEn');
+    if (zhBtn) zhBtn.classList.toggle('active', this.settings.lang === 'zh');
+    if (enBtn) enBtn.classList.toggle('active', this.settings.lang === 'en');
+  },
+
+  applyUiLanguage() {
+    document.documentElement.lang = this.settings.lang === 'en' ? 'en' : 'zh-CN';
+    this.syncLangToggle();
+    this.syncSettingsUi();
+    const skipBtn = this.$('btnSkipLore');
+    if (skipBtn && this.screen === 'lore') {
+      skipBtn.textContent = this.settings.lang === 'en' ? 'Skip' : '跳过';
+    }
+    if (this.screen === 'login') this.renderLoginUi();
+    else if (this.screen === 'title') this.renderTitleUi();
+    else if (this.screen === 'controls') this.renderControlsUi();
+    else if (this.screen === 'hub') this.renderHub();
+    else if (this.screen === 'shop') this.renderShop();
+    else if (this.screen === 'profile') this.renderProfile();
+    else if (this.screen === 'leaderboard') this.loadLeaderboard();
+  },
+
+  renderLoginUi() {
+    const title = this.$('loginMainTitle');
+    if (title) title.textContent = this.t('game_title');
+    const sub = this.$('loginSubtitle');
+    if (sub) sub.textContent = this.t('game_subtitle');
+    const nickLabel = this.$('loginLabelNick');
+    if (nickLabel) nickLabel.textContent = this.t('nickname');
+    const passLabel = this.$('loginLabelPass');
+    if (passLabel) passLabel.textContent = this.t('password');
+    const loginBtn = this.$('btnLogin');
+    if (loginBtn && !loginBtn.disabled) loginBtn.textContent = this.t('login');
+    const regBtn = this.$('btnRegister');
+    if (regBtn && !regBtn.disabled) regBtn.textContent = this.t('register');
+    const demoBtn = this.$('btnDemoLogin');
+    if (demoBtn && !demoBtn.disabled) demoBtn.textContent = this.t('demo_login');
+    const hint = this.$('loginDemoHint');
+    if (hint) {
+      hint.innerHTML = this.settings.lang === 'en'
+        ? 'Demo: <strong>demo</strong> / <strong>demo123</strong> — tap the button below to <strong>go to the map</strong>'
+        : 'Demo：<strong>demo</strong> / <strong>demo123</strong> — 点下方按钮<strong>直接进入地图</strong>';
+    }
+  },
+
+  renderTitleUi() {
+    const name = this.$('titleLocalName');
+    if (name) name.textContent = this.t('game_title');
+    const hint = this.$('titleHint');
+    if (hint) hint.textContent = this.t('press_continue');
+  },
+
+  renderControlsUi() {
+    const title = this.$('controlsTitle');
+    if (title) title.textContent = this.t('controls_title');
+    const pcLabel = this.$('controlsPcLabel');
+    if (pcLabel) pcLabel.textContent = this.t('controls_pc_label');
+    const pcText = this.$('controlsPcText');
+    if (pcText) pcText.textContent = this.t('controls_pc_text');
+    const touchLabel = this.$('controlsTouchLabel');
+    if (touchLabel) touchLabel.textContent = this.t('controls_touch_label');
+    const touchText = this.$('controlsTouchText');
+    if (touchText) touchText.textContent = this.t('controls_touch_text');
+    const hint = this.$('controlsHint');
+    if (hint) hint.textContent = this.t('controls_enter_hint');
+    const hubBtn = this.$('btnToHub');
+    if (hubBtn) hubBtn.textContent = this.t('enter_hub');
+  },
+
+  bindLangToggle() {
+    this.$('langBtnZh')?.addEventListener('click', () => this.setLanguage('zh'));
+    this.$('langBtnEn')?.addEventListener('click', () => this.setLanguage('en'));
+  },
+
   showScreen(name) {
     this.screen = name;
     document.querySelectorAll('[data-screen]').forEach((el) => {
@@ -96,6 +211,9 @@ const App = {
     if (name === 'leaderboard') this.loadLeaderboard();
     if (name === 'profile') this.renderProfile();
     if (name === 'settings') this.syncSettingsUi();
+    if (name === 'login') this.renderLoginUi();
+    if (name === 'title') this.renderTitleUi();
+    if (name === 'controls') this.renderControlsUi();
   },
 
   setLoginLoading(loading) {
@@ -107,8 +225,12 @@ const App = {
       b.style.opacity = loading ? '0.65' : '';
     });
     const demo = this.$('btnDemoLogin');
-    if (demo && loading) demo.textContent = '登录中…';
-    else if (demo) demo.textContent = '一键登录 Demo';
+    if (demo && loading) demo.textContent = this.t('logging_in');
+    else if (demo) demo.textContent = this.t('demo_login');
+    const loginBtn = this.$('btnLogin');
+    if (loginBtn && !loading) loginBtn.textContent = this.t('login');
+    const regBtn = this.$('btnRegister');
+    if (regBtn && !loading) regBtn.textContent = this.t('register');
   },
 
   enterHub() {
@@ -122,7 +244,9 @@ const App = {
     } catch (e) { /* offline */ }
     this.showScreen('hub');
     gameAudio?.unlock?.();
-    this.showToast(`欢迎，${this.profile?.nickname || '玩家'}！`);
+    this.showToast(this.tFormat('hub_welcome', {
+      name: this.profile?.nickname || this.t('player_default'),
+    }));
   },
 
   showToast(msg) {
@@ -136,7 +260,7 @@ const App = {
 
   updateOnlineBadge(n) {
     const el = this.$('onlineBadge');
-    if (el) el.textContent = n > 0 ? `${n} 在线` : '';
+    if (el) el.textContent = n > 0 ? this.tFormat('online_badge', { n }) : '';
   },
 
   loadSettings() {
@@ -160,6 +284,7 @@ const App = {
     if (musicEl) musicEl.checked = this.settings.music;
     const langEl = this.$('settingLang');
     if (langEl) langEl.value = this.settings.lang === 'en' ? 'en' : 'zh';
+    this.syncLangToggle();
     window.GameController?.refreshSnackPanel?.();
   },
 
@@ -381,6 +506,7 @@ const App = {
     this.bindLore();
     this.bindGlobalHotkeys();
     this.bindSettings();
+    this.bindLangToggle();
     this.loadSettings();
 
     const session = JSON.parse(localStorage.getItem('bgf_session') || 'null');
@@ -427,7 +553,7 @@ const App = {
     const err = this.$('loginError');
     if (err) err.textContent = '';
     if (!nick || !pass) {
-      if (err) err.textContent = '请输入昵称和密码';
+      if (err) err.textContent = this.t('err_need_credentials');
       return;
     }
 
@@ -453,7 +579,7 @@ const App = {
       }
 
       if (!res || !res.ok) {
-        if (err) err.textContent = res?.error || '登录失败';
+        if (err) err.textContent = res?.error || this.t('err_login_failed');
         return;
       }
 
@@ -470,7 +596,7 @@ const App = {
         this.startIntro();
       }
     } catch (e) {
-      if (err) err.textContent = '登录出错：' + (e.message || '未知错误');
+      if (err) err.textContent = `${this.t('err_login_failed')}: ${e.message || this.t('err_login_unknown')}`;
     } finally {
       this.setLoginLoading(false);
     }
@@ -484,9 +610,9 @@ const App = {
     this.setLoginLoading(true);
     try {
       const chk = await this.api('auth.php', { action: 'check', nickname: nick });
-      if (chk?.exists) { if (err) err.textContent = '昵称已被使用'; return; }
+      if (chk?.exists) { if (err) err.textContent = this.t('err_nick_taken'); return; }
       const res = await this.api('auth.php', { action: 'register', nickname: nick, password: pass });
-      if (!res?.ok) { if (err) err.textContent = res?.error || '注册失败'; return; }
+      if (!res?.ok) { if (err) err.textContent = res?.error || this.t('err_register_failed'); return; }
       this.profile = res.profile || { nickname: nick, token: res.token, coins: 0, stars: 0, levelStars: [] };
       if (!this.profile.nickname) this.profile.nickname = nick;
       if (!this.profile.token) this.profile.token = res.token;
@@ -632,6 +758,23 @@ const App = {
     });
   },
 
+  renderHubUi(currentLevel = 1) {
+    const title = this.$('hubTitle');
+    if (title) title.textContent = this.t('hub_title');
+    const continueLabel = this.$('continueLevelLabel');
+    if (continueLabel) continueLabel.textContent = this.tFormat('continue_level', { n: currentLevel });
+    const navShop = this.$('navShop');
+    if (navShop) navShop.textContent = this.t('shop');
+    const navRank = this.$('navRank');
+    if (navRank) navRank.textContent = this.t('rank');
+    const navSettings = this.$('navSettings');
+    if (navSettings) navSettings.textContent = this.t('settings');
+    const navProfile = this.$('navProfile');
+    if (navProfile) navProfile.textContent = this.t('profile');
+    const navRules = this.$('navRules');
+    if (navRules) navRules.textContent = this.t('rules');
+  },
+
   renderHub() {
     const map = this.$('levelMap');
     if (!map) return;
@@ -639,8 +782,7 @@ const App = {
     const stars = this.profile?.levelStars || [];
     const max = this.highestUnlockedLevel(this.profile);
     const current = Math.max(0, Math.min(max, Number(this.profile?.currentLevel) || 0));
-    const contNum = this.$('continueLevelNum');
-    if (contNum) contNum.textContent = String(current + 1);
+    this.renderHubUi(current + 1);
     for (let i = 0; i < 20; i++) {
       const node = document.createElement('button');
       node.className = 'map-node';
@@ -651,7 +793,7 @@ const App = {
       if (i > max) node.classList.add('locked');
       node.innerHTML = `<span class="node-num">${i + 1}</span>${stars[i] ? '<span class="node-star">★</span>' : ''}`;
       node.addEventListener('click', () => {
-        if (i > max) { this.showToast('请先完成前面的关卡'); return; }
+        if (i > max) { this.showToast(this.t('hub_locked_level')); return; }
         this.startLevel(i);
       });
       map.appendChild(node);
@@ -664,7 +806,7 @@ const App = {
 
   startLevel(index) {
     if (!window.GameController) {
-      this.showToast('游戏未初始化');
+      this.showToast(this.t('game_not_ready'));
       return;
     }
     if (this.profile) {
@@ -1131,10 +1273,7 @@ const App = {
       this.saveSettings();
     });
     this.$('settingLang')?.addEventListener('change', (e) => {
-      this.settings.lang = e.target.value === 'en' ? 'en' : 'zh';
-      this.settings.langChosen = true;
-      this.saveSettings();
-      window.GameController?.refreshSnackPanel?.();
+      this.setLanguage(e.target.value);
     });
   },
 };
