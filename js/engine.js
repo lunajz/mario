@@ -197,11 +197,12 @@ class GameEngine {
 
     player.x += player.vx;
     this.resolveCollisionX(player);
+    const prevY = player.y;
     player.y += player.vy;
     player.onGround = false;
     player.inGel = false;
     player.inLowGrav = false;
-    this.resolveCollisionY(player);
+    this.resolveCollisionY(player, prevY);
 
     if (player.x < 0) player.x = 0;
     if (player.y > this.H + 100) return 'dead';
@@ -273,8 +274,8 @@ class GameEngine {
       const feet = player.y + player.h;
       const head = player.y;
 
-      // One-way tops: allow jumping onto a platform from the side instead of hitting a side wall.
-      if (feet <= platTop + 12) continue;
+      // One-way tops: near platform top, ignore side walls so edge contact lands on top smoothly.
+      if (feet <= platTop + 16) continue;
       // Allow walking under floating platforms.
       if (head >= platBottom - 2) continue;
 
@@ -284,13 +285,15 @@ class GameEngine {
     }
   }
 
-  resolveCollisionY(player) {
+  resolveCollisionY(player, prevY = player.y) {
+    const prevTop = prevY;
+    const prevBottom = prevY + player.h;
     for (const p of this.platforms) {
       if (!p.active) continue;
       const px = this.getPlatformX(p);
       const py = this.getPlatformY(p);
       if (this.aabb(player, { x: px, y: py, w: p.w, h: p.h })) {
-        if (player.vy > 0) {
+        if (player.vy >= 0 && prevBottom <= py + 10) {
           player.y = py - player.h;
           player.vy = 0;
           player.onGround = true;
@@ -307,7 +310,7 @@ class GameEngine {
           if (p.type === 'hidden' && p.reveal) {
             if (Math.abs(player.x - p.reveal) < 80) this.revealedHidden[p.reveal] = true;
           }
-        } else if (player.vy < 0) {
+        } else if (player.vy < 0 && prevTop >= py + p.h - 10) {
           player.y = py + p.h;
           player.vy = 0;
           if (p.type === 'question' || p.type === 'brick') {

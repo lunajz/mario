@@ -25,6 +25,10 @@
   const input = { left: false, right: false, jump: false, interact: false };
   const $ = (id) => document.getElementById(id);
 
+  function resetInputState() {
+    input.left = input.right = input.jump = input.interact = false;
+  }
+
   async function unlockAudio() {
     if (typeof gameAudio !== 'undefined') {
       await gameAudio.unlock();
@@ -81,6 +85,7 @@
   }
 
   function startLevel(levelIndex, fresh = true) {
+    resetInputState();
     currentLevel = levelIndex;
     if (fresh) levelCoins = 0;
     const ld = LEVEL_DATA[currentLevel];
@@ -156,7 +161,7 @@
   function onDeath(reason) {
     if (gameState !== 'playing') return;
     gameState = 'dead';
-    input.left = input.right = input.jump = input.interact = false;
+    resetInputState();
     levelCoins = 0;
     engine.spawnDeathSplat(player, profile?.splat);
     const mute = profile?.muteDev;
@@ -287,7 +292,7 @@
 
   function returnToHubFromGame() {
     gameState = 'idle';
-    input.left = input.right = input.jump = input.interact = false;
+    resetInputState();
     gameAudio?.stopBGM();
     App?.returnToHub?.();
   }
@@ -353,7 +358,7 @@
       getGameState: () => gameState,
       goToLevel(index) {
         if (index < 0 || index >= LEVEL_DATA.length) return;
-        input.left = input.right = input.jump = input.interact = false;
+        resetInputState();
         startLevel(index, true);
         const devEl = document.getElementById('devLevel');
         if (devEl) devEl.textContent = String(currentLevel + 1);
