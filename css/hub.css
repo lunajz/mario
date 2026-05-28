@@ -311,6 +311,23 @@ body[data-app-screen="game"] #hud .hud-right {
   gap: 14px;
 }
 
+.shop-screen .sub-header {
+  position: relative;
+}
+
+.shop-cheat-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  padding: 0;
+  border: none;
+  margin: 0;
+  pointer-events: none;
+}
+
 .shop-screen .sub-header,
 .shop-screen .sub-header h2,
 .shop-screen .sub-header > span {

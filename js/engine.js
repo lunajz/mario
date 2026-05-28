@@ -44,6 +44,12 @@ class GameEngine {
     this.remoteMatch = null;
     this.trailTimer = 0;
     this.coinRewardsEnabled = true;
+    this.cameraShake = 0;
+  }
+
+  triggerCameraShake(durationMs = 400, intensity = 6) {
+    this.cameraShake = Math.max(this.cameraShake, durationMs);
+    this.cameraShakeIntensity = intensity;
   }
 
   setCoinRewardsEnabled(enabled) {
@@ -160,8 +166,27 @@ class GameEngine {
       animFrame: 0, animTimer: 0, canJump: true,
       inLowGrav: false, inGel: false, levelCoins: 0,
       big: false, speedBoost: false, highJump: false, canGlide: false,
+      canBreakBricks: false, canStompEnemies: false, fireTouch: false,
+      flutterJump: false, lowGravSnack: false, hitShield: false,
+      snackId: null, smokeFx: false, sparkleFx: false, spinFx: false, spinAngle: 0,
       skin: 'skin_default', trail: 'none', splat: 'default', nickname: '',
     };
+  }
+
+  tryAbsorbHit(player) {
+    if (!player?.hitShield) return false;
+    player.hitShield = false;
+    player.invincible = 2500;
+    player.vy = -9;
+    this.spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ffb6d9', 14);
+    return true;
+  }
+
+  defeatEnemy(player, enemy) {
+    enemy.alive = false;
+    player.vy = Math.min(player.vy, -9);
+    this.spawnParticles(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2, '#8b4513', 10);
+    if (typeof gameAudio !== 'undefined') gameAudio.playCoin();
   }
 
   updatePlayer(player, input, dt) {
@@ -172,7 +197,8 @@ class GameEngine {
     }
 
     const speed = player.speedBoost ? SPEED_BOOST : MOVE_SPEED;
-    const grav = player.inLowGrav ? LOW_GRAVITY : GRAVITY;
+    let grav = player.inLowGrav ? LOW_GRAVITY : GRAVITY;
+    if (player.lowGravSnack && !player.inLowGrav) grav *= 0.62;
     const jumpF = player.highJump ? HIGH_JUMP : JUMP_FORCE;
 
     if (input.left) { player.vx = -speed; player.facing = -1; }
@@ -190,6 +216,13 @@ class GameEngine {
 
     if (player.canGlide && !player.onGround && player.vy > 0) {
       player.vy *= 0.92;
+    }
+    if (player.flutterJump && !player.onGround && player.vy > 0 && input.jump) {
+      player.vy *= 0.88;
+    }
+
+    if (player.spinFx) {
+      player.spinAngle = (player.spinAngle || 0) + dt * 0.02;
     }
 
     player.vy += grav;
@@ -355,8 +388,16 @@ class GameEngine {
   hitBlock(p, player) {
     if (p.type === 'question' && p.active) {
       p.active = false;
-      this.applyPower(player, Math.floor(Math.random() * 8), { source: 'random' });
+      if (player.powerSource !== 'snack') {
+        this.applyPower(player, Math.floor(Math.random() * 8), { source: 'random' });
+      }
       this.spawnParticles(p.x + p.w / 2, p.y, '#ffd700', 10);
+      return;
+    }
+    if (p.type === 'brick' && p.active && player.canBreakBricks) {
+      p.active = false;
+      this.spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#c87850', 12);
+      if (typeof gameAudio !== 'undefined') gameAudio.playPowerup(4);
     }
   }
 
@@ -431,7 +472,9 @@ class GameEngine {
           else if (r.x >= r.moveX[1]) { r.x = r.moveX[1]; r.patrolDir = -1; }
         }
       }
-      if (this.circleHitsPlayer(r.x, r.y, r.r * 0.88, player) && player.invincible <= 0) return 'dead';
+      if (this.circleHitsPlayer(r.x, r.y, r.r * 0.88, player) && player.invincible <= 0) {
+        if (!this.tryAbsorbHit(player)) return 'dead';
+      }
     }
 
     // Enemies
@@ -452,18 +495,39 @@ class GameEngine {
         e.x += e.speed * (e.dir || 1);
         if (e.x <= e.patrol[0] || e.x >= e.patrol[1]) e.dir = -(e.dir || 1);
       }
-      if (this.aabb(player, e) && player.invincible <= 0) return 'dead';
+      if (this.aabb(player, e)) {
+        if (player.invincible > 0) {
+          this.defeatEnemy(player, e);
+          continue;
+        }
+        const stomping = player.vy > 0 && player.y + player.h <= e.y + Math.max(10, e.h * 0.45);
+        if (stomping && (player.canStompEnemies || player.big)) {
+          this.defeatEnemy(player, e);
+          continue;
+        }
+        if (player.fireTouch) {
+          this.defeatEnemy(player, e);
+          continue;
+        }
+        if (this.tryAbsorbHit(player)) continue;
+        return 'dead';
+      }
     }
 
     if (this.remotePlayer && this.remoteMatch) {
       const rp = this.remotePlayer;
       const box = { x: rp.x, y: rp.y, w: 32, h: 48 };
-      if (this.aabb(player, box) && player.invincible <= 0) return 'dead';
+      if (this.aabb(player, box) && player.invincible <= 0) {
+        if (!this.tryAbsorbHit(player)) return 'dead';
+      }
     }
 
     // Hazards
     for (const h of this.hazards) {
-      if (h.type === 'spike' && this.aabb(player, h) && player.invincible <= 0) return 'dead';
+      if (h.type === 'spike' && this.aabb(player, h) && player.invincible <= 0) {
+        if (this.tryAbsorbHit(player)) continue;
+        return 'dead';
+      }
     }
 
     // Collectibles
@@ -547,6 +611,23 @@ class GameEngine {
       return p.life > 0;
     });
 
+    if (player.smokeFx && Math.random() < 0.12) {
+      this.spawnParticles(
+        player.x + (player.facing > 0 ? player.w : 0),
+        player.y + 8,
+        '#888888',
+        1,
+      );
+    }
+    if (player.sparkleFx && Math.random() < 0.18) {
+      this.spawnParticles(
+        player.x + player.w / 2,
+        player.y + player.h * 0.35,
+        '#ffd700',
+        1,
+      );
+    }
+
     return 'alive';
   }
 
@@ -592,10 +673,21 @@ class GameEngine {
   clearPower(player) {
     player.powerType = -1;
     player.powerSource = null;
+    player.snackId = null;
     player.big = false;
     player.speedBoost = false;
     player.highJump = false;
     player.canGlide = false;
+    player.canBreakBricks = false;
+    player.canStompEnemies = false;
+    player.fireTouch = false;
+    player.flutterJump = false;
+    player.lowGravSnack = false;
+    player.hitShield = false;
+    player.smokeFx = false;
+    player.sparkleFx = false;
+    player.spinFx = false;
+    player.spinAngle = 0;
   }
 
   spawnParticles(x, y, color, count) {
@@ -607,10 +699,22 @@ class GameEngine {
     }
   }
 
-  updateCamera(player) {
+  updateCamera(player, dt = 16) {
     const target = player.x - this.W * 0.35;
     const maxCam = (this.level.width || 2400) - this.W;
     this.camera.x += (Math.max(0, Math.min(target, maxCam)) - this.camera.x) * 0.1;
+    if (this.cameraShake > 0) {
+      this.cameraShake = Math.max(0, this.cameraShake - dt);
+    }
+  }
+
+  getCameraOffset() {
+    if (this.cameraShake <= 0) return { x: 0, y: 0 };
+    const n = this.cameraShakeIntensity || 6;
+    return {
+      x: (Math.random() - 0.5) * n * 2,
+      y: (Math.random() - 0.5) * n * 2,
+    };
   }
 
   render(player) {
@@ -625,7 +729,11 @@ class GameEngine {
       ctx.fillStyle = '#3d1f5c';
       ctx.fillRect(0, 0, this.W, this.H);
 
-      const cam = this.camera.x;
+      const camOffset = this.getCameraOffset();
+      const cam = this.camera.x + (camOffset.x || 0);
+      const camY = camOffset.y || 0;
+      ctx.save();
+      if (camY) ctx.translate(0, camY);
 
     this.drawBackground(ctx, cam);
     this.drawDecorations(ctx, cam);
@@ -709,6 +817,7 @@ class GameEngine {
     ctx.fillStyle = 'rgba(255,182,217,0.8)';
     ctx.font = 'bold 14px sans-serif';
     ctx.fillText(this.level.name, 20, this.H - 20);
+    ctx.restore();
     } catch (err) {
       console.error('render error', err);
       ctx.fillStyle = '#fff';
@@ -1067,38 +1176,56 @@ class GameEngine {
     const ph = player.h * scale;
     const px = x - (pw - player.w) / 2;
     const py = y - (ph - player.h);
-    if (skinImg) {
-      ctx.save();
-      if (player.facing < 0) {
-        ctx.translate(px + pw, py);
-        ctx.scale(-1, 1);
-        ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, 0, 0, pw, ph);
-      } else {
-        ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, px, py, pw, ph);
-      }
-      ctx.restore();
-    } else if (img) {
-      ctx.save();
-      if (player.facing < 0) {
-        ctx.translate(px + pw, py);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0, pw, ph);
-      } else {
-        ctx.drawImage(img, px, py, pw, ph);
-      }
-      ctx.restore();
-      const tint = typeof SKIN_TINTS !== 'undefined' ? SKIN_TINTS[player.skin] : null;
-      if (tint) {
+    const drawAt = (drawFn) => {
+      if (player.spinFx) {
         ctx.save();
-        ctx.globalCompositeOperation = 'source-atop';
-        ctx.fillStyle = tint;
-        ctx.globalAlpha = 0.45;
-        ctx.fillRect(px, py, pw, ph);
+        ctx.translate(px + pw / 2, py + ph / 2);
+        ctx.rotate(player.spinAngle || 0);
+        ctx.translate(-(px + pw / 2), -(py + ph / 2));
+        drawFn();
         ctx.restore();
+      } else {
+        drawFn();
       }
+    };
+    if (skinImg) {
+      drawAt(() => {
+        if (player.facing < 0) {
+          ctx.save();
+          ctx.translate(px + pw, py);
+          ctx.scale(-1, 1);
+          ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, 0, 0, pw, ph);
+          ctx.restore();
+        } else {
+          ctx.drawImage(skinImg, 0, 0, skinImg.width, skinImg.height, px, py, pw, ph);
+        }
+      });
+    } else if (img) {
+      drawAt(() => {
+        ctx.save();
+        if (player.facing < 0) {
+          ctx.translate(px + pw, py);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, 0, 0, pw, ph);
+        } else {
+          ctx.drawImage(img, px, py, pw, ph);
+        }
+        ctx.restore();
+        const tint = typeof SKIN_TINTS !== 'undefined' ? SKIN_TINTS[player.skin] : null;
+        if (tint) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'source-atop';
+          ctx.fillStyle = tint;
+          ctx.globalAlpha = 0.45;
+          ctx.fillRect(px, py, pw, ph);
+          ctx.restore();
+        }
+      });
     } else {
-      ctx.fillStyle = '#ff69b4';
-      ctx.fillRect(px, py, pw, ph);
+      drawAt(() => {
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(px, py, pw, ph);
+      });
     }
 
     // Power-up indicator glow

@@ -4,7 +4,7 @@
         "password": "$2y$10$KzJbH0oJRPXPrUMjCTZ3ju\/9mlP4LdOTdcgy5aPIdA070VPEvVgYa",
         "token": "demo_token_bubble_gum_factory_2026",
         "stars": 3,
-        "coins": 500,
+        "coins": 300,
         "levelStars": [
             true,
             true,
@@ -28,11 +28,12 @@
             false
         ],
         "maxLevel": 3,
-        "skin": "skin_default",
+        "skin": "skin_fire",
         "trail": "none",
         "splat": "default",
         "owned": [
-            "skin_default"
+            "skin_default",
+            "skin_fire"
         ],
         "equipped": {
             "skin": "skin_default",
@@ -50,10 +51,28 @@
     {
         "nickname": "chiachia",
         "stars": 2,
-        "coins": 5,
+        "coins": 35,
         "levelStars": [
             true,
-            true
+            true,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
         ],
         "maxLevel": 2,
         "skin": "skin_default",

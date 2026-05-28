@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
-  <link rel="stylesheet" href="css/style.css?v=20260528u">
-  <link rel="stylesheet" href="css/hub.css?v=20260528x">
+  <link rel="stylesheet" href="css/style.css?v=20260529e">
+  <link rel="stylesheet" href="css/hub.css?v=20260529f">
 </head>
 <body>
   <div id="langToggle" class="lang-toggle" role="group" aria-label="Language">
@@ -91,6 +91,7 @@
       <button data-back-hub class="btn-back">返回</button>
       <h2 id="shopTitle">皮肤商店</h2>
       <span><span id="shopCoins">0</span> 🪙</span>
+      <input id="shopCheatInput" class="shop-cheat-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Shop cheat code" tabindex="-1">
       <button id="btnDebugCoins" class="btn-debug hidden" type="button" title="测试用：+100 金币">+100 🪙</button>
     </header>
     <div class="shop-stack">
@@ -206,7 +207,7 @@
     <button id="btnSnackPanel" class="btn-snack-toggle" type="button">零食(Q)</button>
     <div id="snackPanel" class="snack-panel hidden">
       <div class="snack-panel-layout">
-        <div id="snackPreview" class="snack-preview" aria-hidden="false">
+        <div id="snackPreview" class="snack-preview is-idle" aria-hidden="false">
           <img id="snackPreviewImg" alt="">
           <div class="snack-preview-info">
             <div id="snackPreviewName" class="snack-preview-name"></div>
@@ -276,9 +277,9 @@
   <script src="js/levels.js?v=20260527k"></script>
   <script src="js/shop.js?v=20260528p"></script>
   <script src="js/audio.js?v=20260523"></script>
-  <script src="js/engine.js?v=20260528d"></script>
-  <script src="js/game.js?v=20260529c"></script>
+  <script src="js/engine.js?v=20260529d"></script>
+  <script src="js/game.js?v=20260529e"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
-  <script src="js/app.js?v=20260529f"></script>
+  <script src="js/app.js?v=20260529h"></script>
 </body>
 </html>

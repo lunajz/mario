@@ -33,19 +33,67 @@
   const POWERUP_ICONS = ['👑', '🥚', '💖', '🔥', '🍄', '⚡', '⬆️', '🪽'];
   const POWER_NOTICE_MIN_MS = 100;
   const SNACK_LEVEL_DURATION = 24 * 60 * 60 * 1000;
-  const SNACK_TO_POWER_TYPE = {
-    snack_bullet: 5,
-    snack_block: 3,
-    snack_waffle: 7,
-    snack_locket: 0,
-    snack_goomba: 2,
-    snack_flower: 4,
-    snack_soda: 5,
-    snack_yoshi: 6,
-    snack_pasta: 1,
-    snack_mushroom: 4,
-    snack_star: 0,
-    snack_shy: 6,
+  const SNACK_EFFECTS = {
+    snack_bullet: {
+      iconType: 5,
+      label: { zh: { head: '咻咻冲刺', detail: '移动速度提升' }, en: { head: 'Pew Pew Dash', detail: 'Faster movement' } },
+      apply(p) { p.speedBoost = true; },
+    },
+    snack_block: {
+      iconType: 4,
+      label: { zh: { head: '砖块糖粉', detail: '可顶碎砖块' }, en: { head: 'Block Powder', detail: 'Smash bricks from below' } },
+      apply(p) { p.canBreakBricks = true; p.big = true; },
+    },
+    snack_waffle: {
+      iconType: 7,
+      label: { zh: { head: '管道传送', detail: '滑翔 + 加速穿越' }, en: { head: 'Pipe Warp', detail: 'Glide and sprint' } },
+      apply(p) { p.canGlide = true; p.speedBoost = true; },
+    },
+    snack_locket: {
+      iconType: 0,
+      label: { zh: { head: '力量吊坠', detail: '短暂无敌 + 闪光' }, en: { head: 'Power Locket', detail: 'Brief invincibility' } },
+      apply(p, eng) { p.invincible = 8000; p.sparkleFx = true; eng.triggerCameraShake(180, 3); },
+    },
+    snack_goomba: {
+      iconType: 2,
+      label: { zh: { head: '栗宝宝软糖', detail: '踩扁敌人 + 恢复生命' }, en: { head: 'Goomba Gummies', detail: 'Stomp foes + heal' } },
+      apply(p) { p.canStompEnemies = true; p.lives = Math.min(p.lives + 1, 5); },
+    },
+    snack_flower: {
+      iconType: 3,
+      label: { zh: { head: '火之花糖', detail: '触碰烧灭敌人 + 耳旁冒烟' }, en: { head: 'Fire Flower', detail: 'Burn enemies on touch' } },
+      apply(p) { p.fireTouch = true; p.smokeFx = true; },
+    },
+    snack_soda: {
+      iconType: 5,
+      label: { zh: { head: '花卉苏打', detail: '加速 + 饱嗝震屏' }, en: { head: 'Flower Soda', detail: 'Speed boost + screen shake' } },
+      apply(p, eng) { p.speedBoost = true; eng.triggerCameraShake(520, 8); },
+    },
+    snack_yoshi: {
+      iconType: 6,
+      label: { zh: { head: '耀西特调', detail: '高跳 + 滞空飘浮' }, en: { head: "Yoshi's Drink", detail: 'High jump + flutter' } },
+      apply(p) { p.highJump = true; p.flutterJump = true; },
+    },
+    snack_pasta: {
+      iconType: 3,
+      label: { zh: { head: '库巴烈火面', detail: '辣跑加速 + 灼烧敌人' }, en: { head: 'Fire Pasta', detail: 'Sprint + burn enemies' } },
+      apply(p) { p.speedBoost = true; p.fireTouch = true; p.spinFx = true; },
+    },
+    snack_mushroom: {
+      iconType: 4,
+      label: { zh: { head: '超级蘑菇糖', detail: '变大 + 抵挡一次伤害' }, en: { head: 'Super Mushroom', detail: 'Grow big + one hit shield' } },
+      apply(p) { p.big = true; p.hitShield = true; },
+    },
+    snack_star: {
+      iconType: 0,
+      label: { zh: { head: '星星糖', detail: '本关无敌' }, en: { head: 'Star Candy', detail: 'Invincible this level' } },
+      apply(p) { p.invincible = SNACK_LEVEL_DURATION; p.sparkleFx = true; },
+    },
+    snack_shy: {
+      iconType: 7,
+      label: { zh: { head: '嘿呵糖浆', detail: '轻飘跳跃 + 嘿呵叫声' }, en: { head: 'Shy Guy Syrup', detail: 'Floaty jumps + squeak' } },
+      apply(p) { p.lowGravSnack = true; p.canGlide = true; },
+    },
   };
   const SNACK_LIST = (typeof SHOP_CATALOG !== 'undefined' && Array.isArray(SHOP_CATALOG.snacks))
     ? SHOP_CATALOG.snacks
@@ -337,37 +385,50 @@
     if (descEl) descEl.textContent = snackDescText(snackId);
   }
 
+  function clearSnackPreview() {
+    hoveredSnackPreviewId = null;
+    const preview = $('snackPreview');
+    const img = $('snackPreviewImg');
+    if (img) {
+      img.removeAttribute('src');
+      img.alt = '';
+    }
+    updateSnackPreviewText(null);
+    preview?.classList.add('is-idle');
+  }
+
   function showSnackPreview(snackId) {
+    if (!snackId) {
+      clearSnackPreview();
+      return;
+    }
     const img = $('snackPreviewImg');
     const url = snackImageUrl(snackId);
     if (!img || !url) return;
-    if (snackId) hoveredSnackPreviewId = snackId;
+    hoveredSnackPreviewId = snackId;
+    $('snackPreview')?.classList.remove('is-idle');
     img.src = url;
     img.alt = snackName(snackId);
     updateSnackPreviewText(snackId);
   }
 
-  function defaultSnackPreviewId() {
-    if (activeSnackId && SNACK_BY_ID[activeSnackId]) return activeSnackId;
-    return SNACK_LIST[0]?.id || null;
+  function refreshSnackPreview() {
+    if (hoveredSnackPreviewId && SNACK_BY_ID[hoveredSnackPreviewId]) {
+      showSnackPreview(hoveredSnackPreviewId);
+    } else {
+      clearSnackPreview();
+    }
   }
 
-  function refreshSnackPreview() {
-    const id = hoveredSnackPreviewId || defaultSnackPreviewId();
-    if (!id) return;
-    const img = $('snackPreviewImg');
-    const url = snackImageUrl(id);
-    if (!img || !url) return;
-    img.src = url;
-    img.alt = snackName(id);
-    updateSnackPreviewText(id);
+  function snackEffectLabel(snackId) {
+    const fx = SNACK_EFFECTS[snackId];
+    const lang = snackLang();
+    return fx?.label?.[lang] || fx?.label?.zh || { head: snackUi('effect_fallback'), detail: '' };
   }
 
   function snackEffectText(snackId) {
-    const powerType = SNACK_TO_POWER_TYPE[snackId];
-    if (typeof powerType !== 'number') return snackUi('effect_fallback');
-    const lang = snackLang();
-    return POWERUP_EFFECT[lang]?.[powerType] || POWERUP_EFFECT.zh[powerType] || snackUi('effect_fallback');
+    const { detail, head } = snackEffectLabel(snackId);
+    return detail || head || snackUi('effect_fallback');
   }
 
   function updateSnackPanelChrome() {
@@ -389,15 +450,26 @@
 
   function applySnackEffectToPlayer(snackId) {
     if (!player) return;
-    const powerType = SNACK_TO_POWER_TYPE[snackId];
-    if (typeof powerType !== 'number') return;
-    engine.applyPower(player, powerType, { source: 'snack' });
+    const fx = SNACK_EFFECTS[snackId];
+    if (!fx) return;
+    engine.clearPower(player);
+    if (profile?.jumpBoots) player.highJump = true;
+    player.powerType = fx.iconType ?? 0;
+    player.powerSource = 'snack';
+    player.snackId = snackId;
     player.powerTimer = SNACK_LEVEL_DURATION;
+    fx.apply(player, engine);
+    if (typeof gameAudio !== 'undefined') {
+      if (snackId === 'snack_shy') gameAudio.playJump();
+      else if (snackId === 'snack_bullet') gameAudio.playPowerup(5);
+      else gameAudio.playPowerup(fx.iconType ?? 0);
+    }
   }
 
   function deactivateSnackEffect({ silent = false } = {}) {
     activeSnackId = null;
     if (player?.powerSource === 'snack') engine.clearPower(player);
+    if (player && profile?.jumpBoots) player.highJump = true;
     if (!silent) App?.showToast?.(gameUi('toast_snack_off'));
     updateSnackPanel();
     updateHUD();
@@ -434,10 +506,11 @@
     const panel = $('snackPanel');
     if (panel) panel.classList.toggle('hidden', !snackPanelOpen);
     if (snackPanelOpen) {
-      hoveredSnackPreviewId = null;
-      refreshSnackPanel();
+      updateSnackPanelChrome();
+      clearSnackPreview();
+      updateSnackPanel();
     } else {
-      hoveredSnackPreviewId = null;
+      clearSnackPreview();
     }
   }
 
@@ -449,6 +522,11 @@
     const box = $('snackList');
     if (!box || snackListBuilt) return;
     snackListBuilt = true;
+    const panel = $('snackPanel');
+    if (panel && !panel.dataset.previewBound) {
+      panel.dataset.previewBound = '1';
+      panel.addEventListener('mouseleave', clearSnackPreview);
+    }
     box.innerHTML = '';
     for (const snack of SNACK_LIST) {
       const row = document.createElement('div');
@@ -476,7 +554,8 @@
       row.appendChild(btn);
       box.appendChild(row);
     }
-    refreshSnackPanel();
+    clearSnackPreview();
+    updateSnackPanel();
   }
 
   function updateSnackPanel() {
@@ -524,6 +603,9 @@
 
   function updateHUD() {
     if (player) levelCoins = player.levelCoins || 0;
+    if (activeSnackId && player?.powerSource !== 'snack') {
+      activeSnackId = null;
+    }
     const ld = LEVEL_DATA[currentLevel];
     const label = $('levelLabel');
     if (label && ld) {
@@ -585,8 +667,9 @@
       : `${Math.max(0.1, remainMs / 1000).toFixed(1)}s`;
     const isRandom = player.powerSource === 'random';
     if (player.powerSource === 'snack' && activeSnackId) {
+      const snackLabel = snackEffectLabel(activeSnackId);
       mainEl.textContent = gameUiFormat('power_snack_active', { name: snackName(activeSnackId) });
-      detailEl.textContent = gameUi('power_snack_detail');
+      detailEl.textContent = snackLabel.detail || gameUi('power_snack_detail');
       iconEl.classList.remove('sprite');
       iconEl.style.backgroundPosition = '';
       iconEl.textContent = '🍬';
@@ -783,7 +866,7 @@
             }
           },
         });
-        engine.updateCamera(player);
+        engine.updateCamera(player, dt);
         updateHUD();
         if (pStatus === 'dead' || wStatus === 'dead') onDeath();
         else if (wStatus === 'complete') onComplete();

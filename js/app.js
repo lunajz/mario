@@ -13,6 +13,7 @@ const App = {
   _saveTimer: null,
   _saveInFlight: false,
   _saveQueued: false,
+  _shopCheatBuffer: '',
 
   t(key) {
     const table = {
@@ -265,12 +266,17 @@ const App = {
 
   showScreen(name) {
     this.screen = name;
+    if (name !== 'shop') this._shopCheatBuffer = '';
     document.querySelectorAll('[data-screen]').forEach((el) => {
       el.classList.toggle('hidden', el.dataset.screen !== name);
     });
     document.body.dataset.appScreen = name;
     if (name === 'hub') this.renderHub();
-    if (name === 'shop') this.renderShop();
+    if (name === 'shop') {
+      this.renderShop();
+      const cheatInput = this.$('shopCheatInput');
+      if (cheatInput) cheatInput.value = '';
+    }
     if (name === 'leaderboard') this.loadLeaderboard();
     if (name === 'profile') this.renderProfile();
     if (name === 'settings') this.syncPageChrome();
@@ -942,12 +948,42 @@ const App = {
     this.$('btnDebugCoins')?.addEventListener('click', () => this.debugAddCoins(100));
     this.startTrailPreviewLoop();
 
-    document.addEventListener('keydown', (e) => {
-      if (this.screen !== 'shop') return;
-      if (e.code === 'ArrowLeft') { e.preventDefault(); this.shopStep(-1); }
-      else if (e.code === 'ArrowRight') { e.preventDefault(); this.shopStep(1); }
-      else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); this.shopAction(); }
-    });
+    if (!this._shopKeysBound) {
+      this._shopKeysBound = true;
+      window.addEventListener('keydown', (e) => {
+        if (this.screen !== 'shop') return;
+        if (this.tryShopCheatCode(e)) return;
+        if (e.code === 'ArrowLeft') { e.preventDefault(); this.shopStep(-1); }
+        else if (e.code === 'ArrowRight') { e.preventDefault(); this.shopStep(1); }
+        else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); this.shopAction(); }
+      }, true);
+    }
+
+    const shopScreen = this.$('shopScreen');
+    if (shopScreen && !shopScreen.dataset.cheatBound) {
+      shopScreen.dataset.cheatBound = '1';
+      shopScreen.addEventListener('click', (e) => {
+        if (this.screen !== 'shop') return;
+        if (e.target.closest('button, a, input, .carousel-arrow')) return;
+        this.$('shopCheatInput')?.focus({ preventScroll: true });
+      });
+    }
+
+    const shopCheatInput = this.$('shopCheatInput');
+    if (shopCheatInput && !shopCheatInput.dataset.bound) {
+      shopCheatInput.dataset.bound = '1';
+      shopCheatInput.addEventListener('input', () => {
+        if (this.screen !== 'shop' || !this.profile) return;
+        const val = String(shopCheatInput.value || '').toLowerCase();
+        if (!val.includes('demario')) return;
+        shopCheatInput.value = '';
+        this._shopCheatBuffer = '';
+        this.profile.coins = (Number(this.profile.coins) || 0) + 10;
+        this.showToast('+10 🪙');
+        this.renderShop();
+        this.saveProfile();
+      });
+    }
 
     const carousel = this.$('skinCarousel');
     if (carousel) {
@@ -1281,6 +1317,33 @@ const App = {
     this.showToast(`+${amount} 🪙`);
     this.renderShop();
     this.saveProfile();
+  },
+
+  cheatCharFromEvent(e) {
+    if (e.repeat) return '';
+    if (e.key?.length === 1 && /[a-zA-Z]/.test(e.key)) return e.key.toLowerCase();
+    const m = e.code?.match(/^Key([A-Z])$/);
+    return m ? m[1].toLowerCase() : '';
+  },
+
+  tryShopCheatCode(e) {
+    if (this.screen !== 'shop' || !this.profile) return false;
+    const tag = (e.target?.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return false;
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    const key = this.cheatCharFromEvent(e);
+    if (!key) return false;
+    this._shopCheatBuffer = (this._shopCheatBuffer || '') + key;
+    if (this._shopCheatBuffer.length > 16) {
+      this._shopCheatBuffer = this._shopCheatBuffer.slice(-16);
+    }
+    if (!this._shopCheatBuffer.endsWith('demario')) return false;
+    this._shopCheatBuffer = '';
+    this.profile.coins = (Number(this.profile.coins) || 0) + 10;
+    this.showToast('+10 🪙');
+    this.renderShop();
+    this.saveProfile();
+    return true;
   },
 
   shopActionLocal(item, owned) {
