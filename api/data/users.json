@@ -27,7 +27,7 @@
             false,
             false
         ],
-        "maxLevel": 2,
+        "maxLevel": 3,
         "skin": "skin_default",
         "trail": "none",
         "splat": "default",

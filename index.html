@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
-  <link rel="stylesheet" href="css/style.css?v=20260528k">
-  <link rel="stylesheet" href="css/hub.css?v=20260528d">
+  <link rel="stylesheet" href="css/style.css?v=20260528u">
+  <link rel="stylesheet" href="css/hub.css?v=20260528u">
 </head>
 <body>
   <section id="loginScreen" data-screen="login" class="app-screen">
@@ -197,14 +197,33 @@
     </div>
     <button id="btnSnackPanel" class="btn-snack-toggle" type="button">零食(Q)</button>
     <div id="snackPanel" class="snack-panel hidden">
-      <div class="snack-panel-head">
-        <h3>零食词条（局内） · <span id="snackCoins">0</span> 🪙</h3>
-        <button id="btnSnackClose" class="btn-small" type="button">关闭</button>
+      <div class="snack-panel-layout">
+        <div id="snackPreview" class="snack-preview" aria-hidden="false">
+          <img id="snackPreviewImg" alt="">
+          <div class="snack-preview-info">
+            <div id="snackPreviewName" class="snack-preview-name"></div>
+            <p id="snackPreviewDesc" class="snack-preview-desc"></p>
+          </div>
+        </div>
+        <div class="snack-panel-body">
+          <div class="snack-panel-head">
+            <h3><span id="snackPanelTitle">零食词条（局内）</span> · <span id="snackCoins">0</span> 🪙</h3>
+            <button id="btnSnackClose" class="btn-small" type="button">关闭</button>
+          </div>
+          <p id="snackPanelTip" class="snack-tip">局内零食词条（一次仅生效一个）</p>
+          <div id="snackList" class="snack-list"></div>
+          <div class="snack-panel-foot">
+            <span id="snackActiveLabel">当前：未激活</span>
+          </div>
+        </div>
       </div>
-      <p class="snack-tip">局内零食词条（一次仅生效一个）</p>
-      <div id="snackList" class="snack-list"></div>
-      <div class="snack-panel-foot">
-        <span id="snackActiveLabel">当前：未激活</span>
+    </div>
+    <div id="snackOfferDialog" class="overlay snack-offer-overlay hidden">
+      <div class="panel snack-offer-panel">
+        <h2>要不要试一试「零食」？</h2>
+        <p>本关已经失败了 3 次。按<strong>空格</strong>打开零食菜单，用词条加成再挑战一次。</p>
+        <p class="hint">按空格打开零食 · 点击取消将重新开始本关</p>
+        <button id="btnSnackOfferCancel" type="button" class="btn-secondary">取消</button>
       </div>
     </div>
     <div id="levelComplete" class="overlay hidden">
@@ -247,11 +266,11 @@
   <div id="toast" class="toast"></div>
 
   <script src="js/levels.js?v=20260527k"></script>
-  <script src="js/shop.js?v=20260523"></script>
+  <script src="js/shop.js?v=20260528p"></script>
   <script src="js/audio.js?v=20260523"></script>
   <script src="js/engine.js?v=20260528d"></script>
-  <script src="js/game.js?v=20260528j"></script>
+  <script src="js/game.js?v=20260528v"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
-  <script src="js/app.js?v=20260528g"></script>
+  <script src="js/app.js?v=20260528r"></script>
 </body>
 </html>

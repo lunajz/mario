@@ -3,7 +3,7 @@
  */
 const App = {
   profile: null,
-  settings: { music: true, lang: 'zh' },
+  settings: { music: true, lang: 'zh', langChosen: false },
   screen: 'login',
   API: (() => {
     const path = window.location.pathname || '/';
@@ -85,6 +85,7 @@ const App = {
     if (name === 'shop') this.renderShop();
     if (name === 'leaderboard') this.loadLeaderboard();
     if (name === 'profile') this.renderProfile();
+    if (name === 'settings') this.syncSettingsUi();
   },
 
   setLoginLoading(loading) {
@@ -131,9 +132,25 @@ const App = {
   loadSettings() {
     try {
       const s = JSON.parse(localStorage.getItem('bgf_settings') || '{}');
-      this.settings = { music: s.music !== false, lang: s.lang || 'zh', ...s };
-    } catch (e) { /* default */ }
+      const lang = s.langChosen === true && s.lang === 'en' ? 'en' : 'zh';
+      this.settings = {
+        music: s.music !== false,
+        lang,
+        langChosen: s.langChosen === true,
+      };
+    } catch (e) {
+      this.settings = { music: true, lang: 'zh', langChosen: false };
+    }
     this.applyAudioSettings();
+    this.syncSettingsUi();
+  },
+
+  syncSettingsUi() {
+    const musicEl = this.$('settingMusic');
+    if (musicEl) musicEl.checked = this.settings.music;
+    const langEl = this.$('settingLang');
+    if (langEl) langEl.value = this.settings.lang === 'en' ? 'en' : 'zh';
+    window.GameController?.refreshSnackPanel?.();
   },
 
   applyAudioSettings() {
@@ -351,9 +368,9 @@ const App = {
     this.bindAuth();
     this.bindHub();
     this.bindShop();
-    this.bindSettings();
     this.bindLore();
     this.bindGlobalHotkeys();
+    this.bindSettings();
     this.loadSettings();
 
     const session = JSON.parse(localStorage.getItem('bgf_session') || 'null');
@@ -1102,13 +1119,11 @@ const App = {
       this.saveSettings();
     });
     this.$('settingLang')?.addEventListener('change', (e) => {
-      this.settings.lang = e.target.value;
+      this.settings.lang = e.target.value === 'en' ? 'en' : 'zh';
+      this.settings.langChosen = true;
       this.saveSettings();
+      window.GameController?.refreshSnackPanel?.();
     });
-    const musicEl = this.$('settingMusic');
-    if (musicEl) musicEl.checked = this.settings.music;
-    const langEl = this.$('settingLang');
-    if (langEl) langEl.value = this.settings.lang;
   },
 };
 

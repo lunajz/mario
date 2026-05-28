@@ -24,6 +24,9 @@
   let activeSnackId = null;
   let blockedPowerupToastAt = 0;
   let snackListBuilt = false;
+  let levelDeathCount = 0;
+  let snackOfferVisible = false;
+  let hoveredSnackPreviewId = null;
   let readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
   const POWERUP_ICONS = ['👑', '🥚', '💖', '🔥', '🍄', '⚡', '⬆️', '🪽'];
@@ -73,18 +76,125 @@
 
   function show(el) { if (el) el.classList.remove('hidden'); }
   function hide(el) { if (el) el.classList.add('hidden'); }
+
+  function showSnackOfferDialog() {
+    snackOfferVisible = true;
+    show($('snackOfferDialog'));
+  }
+
+  function hideSnackOfferDialog() {
+    snackOfferVisible = false;
+    hide($('snackOfferDialog'));
+  }
+
+  const SNACK_UI = {
+    panel_title: { zh: '零食词条（局内）', en: 'In-level Snacks' },
+    panel_tip: { zh: '局内零食词条（一次仅生效一个）', en: 'Only one snack effect at a time.' },
+    active_none: { zh: '当前：未激活', en: 'Active: None' },
+    active_prefix: { zh: '当前：', en: 'Active: ' },
+    btn_toggle: { zh: '零食(Q)', en: 'Snacks (Q)' },
+    btn_close: { zh: '关闭', en: 'Close' },
+    btn_deactivate: { zh: '关闭效果', en: 'Turn off' },
+    btn_use_unlocked: { zh: '使用（已解锁）', en: 'Use (unlocked)' },
+    btn_buy_use: { zh: '购买并使用', en: 'Buy & use' },
+    effect_fallback: { zh: '词条效果', en: 'Snack effect' },
+  };
+
+  const POWERUP_EFFECT = {
+    zh: ['短暂无敌', '额外生命', '恢复生命', '火焰强化', '变大', '速度提升', '跳跃强化', '滑翔'],
+    en: ['Brief invincibility', 'Extra life', 'Heal', 'Fire boost', 'Grow big', 'Speed boost', 'High jump', 'Glide'],
+  };
+
+  function snackLang() {
+    return App?.settings?.lang === 'en' ? 'en' : 'zh';
+  }
+
+  function snackUi(key) {
+    const lang = snackLang();
+    return SNACK_UI[key]?.[lang] || SNACK_UI[key]?.zh || key;
+  }
+
+  function snackLocalizedName(snackId) {
+    const snack = SNACK_BY_ID[snackId];
+    const lang = snackLang();
+    return snack?.name?.[lang] || snack?.name?.zh || snackId || '';
+  }
+
   function snackName(snackId) {
-    return SNACK_BY_ID[snackId]?.name?.zh || snackId || '未知零食';
+    return snackLocalizedName(snackId) || snackId || '未知零食';
+  }
+
+  function snackDescText(snackId) {
+    const snack = SNACK_BY_ID[snackId];
+    const lang = snackLang();
+    return snack?.desc?.[lang] || snack?.desc?.zh || '';
+  }
+
+  function snackImageUrl(snackId) {
+    const name = SNACK_BY_ID[snackId]?.name?.zh;
+    return name ? `images/snack/${name}.png` : '';
+  }
+
+  function updateSnackPreviewText(snackId) {
+    const nameEl = $('snackPreviewName');
+    const descEl = $('snackPreviewDesc');
+    if (!snackId) {
+      if (nameEl) nameEl.textContent = '';
+      if (descEl) descEl.textContent = '';
+      return;
+    }
+    if (nameEl) nameEl.textContent = snackLocalizedName(snackId);
+    if (descEl) descEl.textContent = snackDescText(snackId);
+  }
+
+  function showSnackPreview(snackId) {
+    const img = $('snackPreviewImg');
+    const url = snackImageUrl(snackId);
+    if (!img || !url) return;
+    if (snackId) hoveredSnackPreviewId = snackId;
+    img.src = url;
+    img.alt = snackName(snackId);
+    updateSnackPreviewText(snackId);
+  }
+
+  function defaultSnackPreviewId() {
+    if (activeSnackId && SNACK_BY_ID[activeSnackId]) return activeSnackId;
+    return SNACK_LIST[0]?.id || null;
+  }
+
+  function refreshSnackPreview() {
+    const id = hoveredSnackPreviewId || defaultSnackPreviewId();
+    if (!id) return;
+    const img = $('snackPreviewImg');
+    const url = snackImageUrl(id);
+    if (!img || !url) return;
+    img.src = url;
+    img.alt = snackName(id);
+    updateSnackPreviewText(id);
   }
 
   function snackEffectText(snackId) {
     const powerType = SNACK_TO_POWER_TYPE[snackId];
-    if (typeof powerType !== 'number') return '词条效果';
-    const fullName = (typeof POWERUP_NAMES !== 'undefined' && POWERUP_NAMES[powerType])
-      ? POWERUP_NAMES[powerType]
-      : `效果 ${powerType + 1}`;
-    const [, effectDetailRaw] = String(fullName).split(' - ');
-    return (effectDetailRaw || fullName || '词条效果').trim();
+    if (typeof powerType !== 'number') return snackUi('effect_fallback');
+    const lang = snackLang();
+    return POWERUP_EFFECT[lang]?.[powerType] || POWERUP_EFFECT.zh[powerType] || snackUi('effect_fallback');
+  }
+
+  function updateSnackPanelChrome() {
+    const titleEl = $('snackPanelTitle');
+    if (titleEl) titleEl.textContent = snackUi('panel_title');
+    const tipEl = $('snackPanelTip');
+    if (tipEl) tipEl.textContent = snackUi('panel_tip');
+    const closeBtn = $('btnSnackClose');
+    if (closeBtn) closeBtn.textContent = snackUi('btn_close');
+    const toggleBtn = $('btnSnackPanel');
+    if (toggleBtn) toggleBtn.textContent = snackUi('btn_toggle');
+  }
+
+  function refreshSnackPanel() {
+    updateSnackPanelChrome();
+    refreshSnackPreview();
+    updateSnackPanel();
   }
 
   function applySnackEffectToPlayer(snackId) {
@@ -122,6 +232,7 @@
     }
     activeSnackId = snackId;
     applySnackEffectToPlayer(snackId);
+    showSnackPreview(snackId);
     if (!silent) App?.showToast?.('零食生效，期间不会捡起 Power-up');
     updateSnackPanel();
     updateHUD();
@@ -132,6 +243,12 @@
     snackPanelOpen = !!open;
     const panel = $('snackPanel');
     if (panel) panel.classList.toggle('hidden', !snackPanelOpen);
+    if (snackPanelOpen) {
+      hoveredSnackPreviewId = null;
+      refreshSnackPanel();
+    } else {
+      hoveredSnackPreviewId = null;
+    }
   }
 
   function toggleSnackPanel() {
@@ -147,9 +264,11 @@
       const row = document.createElement('div');
       row.className = 'snack-item';
       row.dataset.snack = snack.id;
+      row.addEventListener('mouseenter', () => showSnackPreview(snack.id));
       const left = document.createElement('div');
+      left.dataset.snackText = snack.id;
       left.innerHTML = `
-        <div class="snack-item-title">${snack.name?.zh || snack.id}</div>
+        <div class="snack-item-title">${snackLocalizedName(snack.id)}</div>
         <div class="snack-item-sub">${snack.price} 🪙 · ${snackEffectText(snack.id)}</div>
       `;
       const btn = document.createElement('button');
@@ -167,15 +286,29 @@
       row.appendChild(btn);
       box.appendChild(row);
     }
+    refreshSnackPanel();
   }
 
   function updateSnackPanel() {
     const coinsEl = $('snackCoins');
     if (coinsEl) coinsEl.textContent = String(profile?.coins ?? bankCoins ?? 0);
     const activeEl = $('snackActiveLabel');
-    if (activeEl) activeEl.textContent = activeSnackId ? `当前：${snackName(activeSnackId)}` : '当前：未激活';
+    if (activeEl) {
+      activeEl.textContent = activeSnackId
+        ? `${snackUi('active_prefix')}${snackName(activeSnackId)}`
+        : snackUi('active_none');
+    }
     const box = $('snackList');
     if (!box) return;
+    box.querySelectorAll('[data-snack-text]').forEach((el) => {
+      const snackId = el.dataset.snackText;
+      const snack = SNACK_BY_ID[snackId];
+      if (!snack) return;
+      const titleEl = el.querySelector('.snack-item-title');
+      const subEl = el.querySelector('.snack-item-sub');
+      if (titleEl) titleEl.textContent = snackLocalizedName(snackId);
+      if (subEl) subEl.textContent = `${snack.price} 🪙 · ${snackEffectText(snackId)}`;
+    });
     box.querySelectorAll('.snack-item-btn').forEach((btn) => {
       const snackId = btn.dataset.snack;
       const snack = SNACK_BY_ID[snackId];
@@ -185,12 +318,12 @@
       btn.classList.remove('active', 'unlocked');
       if (active) {
         btn.classList.add('active');
-        btn.textContent = '关闭效果';
+        btn.textContent = snackUi('btn_deactivate');
       } else if (unlocked) {
         btn.classList.add('unlocked');
-        btn.textContent = '使用（已解锁）';
+        btn.textContent = snackUi('btn_use_unlocked');
       } else {
-        btn.textContent = `购买并使用 ${snack.price} 🪙`;
+        btn.textContent = `${snackUi('btn_buy_use')} ${snack.price} 🪙`;
       }
     });
   }
@@ -212,12 +345,20 @@
     }
     updatePowerNotice(gameState === 'playing');
     const mp = $('mpActions');
-    if (mp && remotePlayer && remoteMatch?.level === currentLevel) {
-      mp.classList.remove('hidden');
-      const opp = $('mpOpponent');
-      if (opp) opp.textContent = remoteMatch.opponent || remotePlayer.nickname || '';
-    } else if (mp) {
-      mp.classList.add('hidden');
+    if (mp) {
+      if (gameState === 'idle') {
+        mp.classList.add('hidden');
+      } else {
+        mp.classList.remove('hidden');
+        const opp = $('mpOpponent');
+        if (opp) {
+          if (remotePlayer && remoteMatch?.level === currentLevel) {
+            opp.textContent = remoteMatch.opponent || remotePlayer.nickname || '';
+          } else {
+            opp.textContent = snackLang() === 'en' ? 'No opponent' : '暂无对手';
+          }
+        }
+      }
     }
     updateSnackPanel();
   }
@@ -291,7 +432,9 @@
 
   function startLevel(levelIndex, fresh = true) {
     resetInputState();
+    hideSnackOfferDialog();
     if (fresh) {
+      levelDeathCount = 0;
       levelSnackUnlocked = {};
       activeSnackId = null;
       blockedPowerupToastAt = 0;
@@ -377,6 +520,7 @@
     gameState = 'dead';
     resetInputState();
     levelCoins = 0;
+    levelDeathCount += 1;
     engine.spawnDeathSplat(player, profile?.splat);
     const mute = profile?.muteDev;
     gameAudio?.playSting('death', mute);
@@ -388,6 +532,9 @@
       $('gameOverMsg').textContent = reason === 'player'
         ? '碰到了其他玩家！'
         : '泡泡糖爆炸！点击任意处或按R重试';
+    }
+    if (levelDeathCount >= 3 && levelDeathCount % 3 === 0) {
+      showSnackOfferDialog();
     }
     updateHUD();
   }
@@ -475,6 +622,13 @@
 
   window.addEventListener('keydown', (e) => {
     unlockAudio();
+    if (e.code === 'Space' && !e.repeat && snackOfferVisible) {
+      e.preventDefault();
+      hideSnackOfferDialog();
+      setSnackPanelOpen(true);
+      updateSnackPanel();
+      return;
+    }
     if (e.code === 'KeyQ' && !e.repeat && gameState === 'playing') {
       e.preventDefault();
       toggleSnackPanel();
@@ -490,6 +644,7 @@
       return;
     }
     if (e.code === 'KeyR' && !e.repeat && gameState !== 'idle') {
+      if (snackOfferVisible) return;
       e.preventDefault();
       const wasDead = gameState === 'dead';
       restartCurrentLevel();
@@ -532,9 +687,12 @@
   function returnToHubFromGame() {
     gameState = 'idle';
     resetInputState();
+    levelDeathCount = 0;
+    hideSnackOfferDialog();
     levelSnackUnlocked = {};
     activeSnackId = null;
     setSnackPanelOpen(false);
+    $('mpActions')?.classList.add('hidden');
     gameAudio?.stopBGM();
     updatePowerNotice(false);
     App?.returnToHub?.();
@@ -546,8 +704,13 @@
   $('btnVictoryHub')?.addEventListener('click', () => App?.returnToHub?.());
   $('btnSnackPanel')?.addEventListener('click', () => toggleSnackPanel());
   $('btnSnackClose')?.addEventListener('click', () => setSnackPanelOpen(false));
+  $('btnSnackOfferCancel')?.addEventListener('click', () => {
+    hideSnackOfferDialog();
+    restartCurrentLevel();
+  });
 
   $('gameOver')?.addEventListener('click', () => {
+    if (snackOfferVisible) return;
     if (gameState === 'dead') restartCurrentLevel();
   });
   $('levelComplete')?.addEventListener('click', () => {
@@ -557,10 +720,12 @@
   $('btnMpGift')?.addEventListener('click', () => {
     const to = remoteMatch?.opponent || remotePlayer?.nickname;
     if (to) Multiplayer.send('gift', to);
+    else App?.showToast?.(snackLang() === 'en' ? 'No online opponent' : '暂无在线对手');
   });
   $('btnMpAttack')?.addEventListener('click', () => {
     const to = remoteMatch?.opponent || remotePlayer?.nickname;
     if (to) Multiplayer.send('attack', to);
+    else App?.showToast?.(snackLang() === 'en' ? 'No online opponent' : '暂无在线对手');
   });
 
   window.addEventListener('resize', () => engine.resize());
@@ -573,6 +738,7 @@
     await engine.loadImages();
     imagesReady = true;
     buildSnackPanelList();
+    updateSnackPanelChrome();
     setSnackPanelOpen(false);
 
     player = engine.createPlayer({ x: 80, y: 460 });
@@ -594,6 +760,8 @@
     nextLevel,
     setRemotePlayer,
     triggerRemoteHit,
+    refreshSnackPreview,
+    refreshSnackPanel,
     get currentLevel() { return currentLevel; },
     get player() { return player; },
     get gameState() { return gameState; },

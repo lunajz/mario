@@ -132,7 +132,7 @@ html, body {
 
 .btn-snack-toggle {
   position: absolute;
-  top: 64px;
+  top: 124px;
   right: 12px;
   z-index: 56;
   border: 2px solid #ff69b4;
@@ -146,10 +146,10 @@ html, body {
 
 .snack-panel {
   position: absolute;
-  top: 108px;
+  top: 172px;
   right: 12px;
-  width: min(420px, 92vw);
-  max-height: min(58vh, 520px);
+  width: min(960px, 98vw);
+  max-height: min(92vh, 720px);
   overflow: auto;
   z-index: 57;
   border: 2px solid #ff69b4;
@@ -161,6 +161,59 @@ html, body {
 }
 .snack-panel.hidden {
   display: none;
+}
+
+.snack-panel-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.snack-preview {
+  flex: 0 0 532px;
+  width: 532px;
+  min-height: 532px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border: 1px solid rgba(255, 182, 217, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px;
+}
+.snack-preview img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.snack-preview img:not([src]) {
+  visibility: hidden;
+}
+.snack-preview-info {
+  width: 100%;
+  margin-top: 10px;
+  text-align: left;
+}
+.snack-preview-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffe8f5;
+  margin-bottom: 8px;
+}
+.snack-preview-desc {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #ffd9ec;
+}
+.snack-panel-body {
+  flex: 1;
+  min-width: 280px;
 }
 .snack-panel-head {
   display: flex;
@@ -262,7 +315,32 @@ html, body {
 }
 
 .overlay.hidden {
-  display: none;
+  display: none !important;
+}
+
+.snack-offer-overlay {
+  z-index: 110;
+}
+
+.snack-offer-panel {
+  max-width: 420px;
+  text-align: center;
+}
+
+.snack-offer-panel h2 {
+  margin: 0 0 12px;
+  color: #5a1a4a;
+}
+
+.snack-offer-panel p {
+  margin: 0 0 10px;
+  color: #5a1a4a;
+  line-height: 1.5;
+}
+
+.snack-offer-panel .btn-secondary {
+  margin-top: 14px;
+  min-width: 120px;
 }
 
 .panel {

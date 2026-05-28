@@ -558,6 +558,10 @@ body[data-appScreen="title"] #titleScreen {
   border: 2px solid #ff69b4;
 }
 
+.mp-actions.hidden {
+  display: none !important;
+}
+
 .profile-panel, .rules-panel, .settings-panel { max-width: 560px; width: 100%; }
 
 .settings-panel label { display: block; margin: 16px 0; color: #5a1a4a; font-weight: 600; }
