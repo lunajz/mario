@@ -21,6 +21,18 @@
   let imagesReady = false;
   let readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
+  const POWERUP_ICONS = ['👑', '🥚', '💖', '🔥', '🍄', '⚡', '⬆️', '🪽'];
+  const POWER_NOTICE_MIN_MS = 100;
+  const POWERUP_SPRITE_POS = [
+    '0% 0%',
+    '33.333% 0%',
+    '66.666% 0%',
+    '100% 0%',
+    '0% 33.333%',
+    '33.333% 33.333%',
+    '66.666% 33.333%',
+    '100% 33.333%',
+  ];
 
   const input = { left: false, right: false, jump: false, interact: false };
   const $ = (id) => document.getElementById(id);
@@ -53,11 +65,7 @@
       const suffix = replay ? ' (本关金币已领取)' : ` (本关 ${levelCoins})`;
       coinEl.textContent = `金币: ${totalDisplay()}${suffix}`;
     }
-    const pl = $('powerLabel');
-    if (pl) {
-      pl.textContent = player && player.powerType >= 0 && typeof POWERUP_NAMES !== 'undefined'
-        ? (POWERUP_NAMES[player.powerType] || '') : '';
-    }
+    updatePowerNotice(gameState === 'playing');
     const mp = $('mpActions');
     if (mp && remotePlayer && remoteMatch?.level === currentLevel) {
       mp.classList.remove('hidden');
@@ -65,6 +73,49 @@
       if (opp) opp.textContent = remoteMatch.opponent || remotePlayer.nickname || '';
     } else if (mp) {
       mp.classList.add('hidden');
+    }
+  }
+
+  function updatePowerNotice(allowShow = true) {
+    const notice = $('powerNotice');
+    const mainEl = $('powerNoticeMain');
+    const detailEl = $('powerNoticeDetail');
+    const iconEl = $('powerNoticeIcon');
+    if (!notice || !mainEl || !detailEl || !iconEl) return;
+    const remainMs = Math.max(0, Number(player?.powerTimer) || 0);
+    if (!allowShow || !player || player.powerType < 0 || remainMs < POWER_NOTICE_MIN_MS) {
+      notice.classList.add('hidden');
+      mainEl.textContent = '';
+      detailEl.textContent = '';
+      iconEl.classList.remove('sprite');
+      iconEl.style.backgroundPosition = '';
+      iconEl.textContent = '';
+      return;
+    }
+    if (notice.classList.contains('hidden')) {
+      notice.classList.remove('hidden');
+    }
+    const fullName = (typeof POWERUP_NAMES !== 'undefined' && POWERUP_NAMES[player.powerType])
+      ? POWERUP_NAMES[player.powerType]
+      : `效果 ${player.powerType + 1}`;
+    const [headNameRaw, effectDetailRaw] = String(fullName).split(' - ');
+    const shortName = (headNameRaw || '').trim();
+    const effectDetail = (effectDetailRaw || '').trim();
+    const remainText = remainMs >= 1000
+      ? `${Math.ceil(remainMs / 1000)}s`
+      : `${Math.max(0.1, remainMs / 1000).toFixed(1)}s`;
+    const isRandom = player.powerSource === 'random';
+    mainEl.textContent = `${isRandom ? '随机加成' : '当前加成'}：${shortName}（${remainText}）`;
+    detailEl.textContent = `词条效果：${effectDetail || '效果生效中'}`;
+    const spritePos = POWERUP_SPRITE_POS[player.powerType];
+    if (spritePos) {
+      iconEl.classList.add('sprite');
+      iconEl.style.backgroundPosition = spritePos;
+      iconEl.textContent = '';
+    } else {
+      iconEl.classList.remove('sprite');
+      iconEl.style.backgroundPosition = '';
+      iconEl.textContent = POWERUP_ICONS[player.powerType] || '✨';
     }
   }
 
@@ -202,6 +253,7 @@
     }
     App?.onLevelComplete?.(currentLevel, coinsToBank, earnedStar);
     levelCoins = 0;
+    updateHUD();
     finishAnimThen(() => {}, 2500);
   }
 
@@ -294,6 +346,7 @@
     gameState = 'idle';
     resetInputState();
     gameAudio?.stopBGM();
+    updatePowerNotice(false);
     App?.returnToHub?.();
   }
 

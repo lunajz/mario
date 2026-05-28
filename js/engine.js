@@ -156,7 +156,7 @@ class GameEngine {
     return {
       x: spawn.x, y: spawn.y, w: 32, h: 48,
       vx: 0, vy: 0, onGround: false, facing: 1,
-      lives: 3, invincible: 0, powerType: -1, powerTimer: 0,
+      lives: 3, invincible: 0, powerType: -1, powerTimer: 0, powerSource: null,
       animFrame: 0, animTimer: 0, canJump: true,
       inLowGrav: false, inGel: false, levelCoins: 0,
       big: false, speedBoost: false, highJump: false, canGlide: false,
@@ -355,7 +355,7 @@ class GameEngine {
   hitBlock(p, player) {
     if (p.type === 'question' && p.active) {
       p.active = false;
-      this.applyPower(player, Math.floor(Math.random() * 8));
+      this.applyPower(player, Math.floor(Math.random() * 8), { source: 'random' });
       this.spawnParticles(p.x + p.w / 2, p.y, '#ffd700', 10);
     }
   }
@@ -481,11 +481,11 @@ class GameEngine {
         } else {
           c.active = false;
           if (c.type === 'lumalee') {
-            this.applyPower(player, 1, { playSound: false });
+            this.applyPower(player, 1, { playSound: false, source: 'lumalee' });
             if (typeof gameAudio !== 'undefined') gameAudio.playCollectible('lumalee');
             player.invincible = 5000;
           } else if (c.type === 'question') {
-            this.applyPower(player, Math.floor(Math.random() * 8), { playSound: false });
+            this.applyPower(player, Math.floor(Math.random() * 8), { playSound: false, source: 'random' });
             if (typeof gameAudio !== 'undefined') gameAudio.playCollectible('question');
           }
           this.spawnParticles(c.x + 14, cy + 14, '#ffd700', 8);
@@ -500,7 +500,7 @@ class GameEngine {
       const py = p.y + Math.sin(p.bob + this.levelTime * 2) * 4;
       if (this.aabb(player, { x: p.x, y: py, w: 36, h: 36 })) {
         p.active = false;
-        this.applyPower(player, p.type);
+        this.applyPower(player, p.type, { source: 'pickup' });
         this.spawnParticles(p.x + 18, py + 18, '#ff69b4', 12);
       }
       p.bob += dt * 0.002;
@@ -538,7 +538,7 @@ class GameEngine {
   }
 
   applyPower(player, type, options = {}) {
-    const { playSound = true } = options;
+    const { playSound = true, source = 'pickup' } = options;
     if (type === -1) {
       if (this.coinRewardsEnabled) {
         player.levelCoins = (player.levelCoins || 0) + 1;
@@ -547,6 +547,7 @@ class GameEngine {
       return;
     }
     player.powerType = type;
+    player.powerSource = source;
     player.powerTimer = POWERUP_DURATION;
     player.invincible = 2000;
 
@@ -570,6 +571,7 @@ class GameEngine {
 
   clearPower(player) {
     player.powerType = -1;
+    player.powerSource = null;
     player.big = false;
     player.speedBoost = false;
     player.highJump = false;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
-  <link rel="stylesheet" href="css/style.css?v=20260523">
+  <link rel="stylesheet" href="css/style.css?v=20260528j">
   <link rel="stylesheet" href="css/hub.css?v=20260528d">
 </head>
 <body>
@@ -178,11 +178,17 @@
     <div id="hud">
       <div class="hud-left">
         <span id="levelLabel">关卡 1 / 20</span>
-        <span id="powerLabel"></span>
       </div>
       <div class="hud-right">
         <span id="coinLabel">金币: 0</span>
       </div>
+    </div>
+    <div id="powerNotice" class="power-notice hidden" aria-live="polite">
+      <span id="powerNoticeIcon" class="power-notice-icon">🎲</span>
+      <span class="power-notice-text">
+        <span id="powerNoticeMain" class="power-notice-main"></span>
+        <span id="powerNoticeDetail" class="power-notice-detail"></span>
+      </span>
     </div>
     <div id="mpActions" class="mp-actions hidden">
       <span id="mpOpponent"></span>
@@ -231,8 +237,8 @@
   <script src="js/levels.js?v=20260527k"></script>
   <script src="js/shop.js?v=20260523"></script>
   <script src="js/audio.js?v=20260523"></script>
-  <script src="js/engine.js?v=20260527o"></script>
-  <script src="js/game.js?v=20260527a"></script>
+  <script src="js/engine.js?v=20260528b"></script>
+  <script src="js/game.js?v=20260528e"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
   <script src="js/app.js?v=20260528g"></script>
 </body>
