@@ -415,7 +415,19 @@ class GameEngine {
 
     // Rollers — hitbox matches drawn circle at (r.x, r.y)
     for (const r of this.rollers) {
-      r.angle += r.speed * 0.05 * r.dir;
+      r.angle += r.speed * 0.05 * (r.dir || 1);
+      if (r.moveX) {
+        const patrolSpeed = r.patrolSpeed ?? r.speed * 0.75;
+        if (r.oneWay) {
+          r.x += patrolSpeed;
+          if (r.x >= r.moveX[1]) r.x = r.moveX[0];
+        } else {
+          if (r.patrolDir == null) r.patrolDir = 1;
+          r.x += patrolSpeed * r.patrolDir;
+          if (r.x <= r.moveX[0]) { r.x = r.moveX[0]; r.patrolDir = 1; }
+          else if (r.x >= r.moveX[1]) { r.x = r.moveX[1]; r.patrolDir = -1; }
+        }
+      }
       if (this.circleHitsPlayer(r.x, r.y, r.r * 0.88, player) && player.invincible <= 0) return 'dead';
     }
 
@@ -423,8 +435,16 @@ class GameEngine {
     for (const e of this.enemies) {
       if (!e.alive) continue;
       if (e.chase) {
-        const dx = player.x - e.x;
-        e.x += Math.sign(dx) * e.speed;
+        const playerCx = player.x + player.w / 2;
+        const enemyCx = e.x + e.w / 2;
+        const dx = playerCx - enemyCx;
+        let speed = Math.min(e.speed, MOVE_SPEED * 0.88);
+        if (!player.onGround) speed *= 0.55;
+        if (player.y + player.h < e.y + 6) speed *= 0.35;
+        if (Math.abs(dx) > 4) {
+          const step = Math.min(speed, Math.abs(dx) * 0.07 + 1.2);
+          e.x += Math.sign(dx) * step;
+        }
       } else if (e.patrol) {
         e.x += e.speed * (e.dir || 1);
         if (e.x <= e.patrol[0] || e.x >= e.patrol[1]) e.dir = -(e.dir || 1);

@@ -4,6 +4,122 @@
  * Level 2 (rotating rollers) moved to level 10
  * Level 8 boss removed; level 9 simplified
  */
+
+/** Level 19 mix segment — tiled ×10 for level 20 */
+const LEVEL20_MIX_SEGMENT = {
+  platforms: [
+    { x: 0, y: 520, w: 200, h: 80, type: 'bouncy' },
+    { x: 250, y: 520, w: 150, h: 80, type: 'gel' },
+    { x: 450, y: 480, w: 80, h: 30, type: 'normal' },
+    { x: 600, y: 520, w: 200, h: 80, type: 'melting', meltDelay: 3 },
+    { x: 850, y: 420, w: 80, h: 30, type: 'moving', moveX: [850, 1100], speed: 2 },
+    { x: 1200, y: 520, w: 150, h: 80, type: 'normal' },
+    { x: 1400, y: 460, w: 80, h: 30, type: 'fake', vanishDelay: 0.5 },
+    { x: 1550, y: 400, w: 80, h: 30, type: 'normal' },
+    { x: 1700, y: 520, w: 200, h: 80, type: 'bouncy' },
+    { x: 1950, y: 450, w: 80, h: 30, type: 'normal' },
+    { x: 2100, y: 520, w: 300, h: 80, type: 'gel' },
+    { x: 2450, y: 400, w: 80, h: 30, type: 'normal' },
+    { x: 2600, y: 520, w: 800, h: 80, type: 'normal' },
+  ],
+  vents: [
+    { x: 1100, y: 350, w: 80, h: 120, dir: 1, power: 14 },
+    { x: 2300, y: 320, w: 80, h: 120, dir: -1, power: 12 },
+  ],
+  rollers: [
+    { x: 1680, y: 490, r: 35, speed: 3, dir: 1, moveX: [1680, 2550], oneWay: true, patrolSpeed: 2.2 },
+  ],
+  hazards: [
+    { x: 1300, y: 560, w: 50, h: 20, type: 'spike' },
+  ],
+  enemies: [
+    { x: 1600, y: 470, w: 55, h: 55, type: 'bubble', patrol: [1500, 1900], speed: 2.5 },
+  ],
+  collectibles: [
+    { x: 300, y: 470, type: 'coin' },
+    { x: 900, y: 370, type: 'question' },
+    { x: 2000, y: 400, type: 'coin' },
+    { x: 2550, y: 350, type: 'coin' },
+  ],
+  powerups: [{ x: 2200, y: 470, type: 7 }],
+};
+
+function offsetX(obj, dx, keys = ['x']) {
+  const o = { ...obj };
+  keys.forEach((k) => {
+    if (o[k] != null) o[k] += dx;
+  });
+  if (o.moveX) o.moveX = [o.moveX[0] + dx, o.moveX[1] + dx];
+  if (o.patrol) o.patrol = [o.patrol[0] + dx, o.patrol[1] + dx];
+  return o;
+}
+
+function buildLevel20() {
+  const SEG_W = 3400;
+  const REPEATS = 3;
+  const seg = LEVEL20_MIX_SEGMENT;
+  const out = {
+    name: '工厂之巅',
+    desc: '终极融合 ×3 — 穿越整个泡泡糖工厂！',
+    width: SEG_W * REPEATS,
+    theme: 'victory',
+    timeLimit: 180,
+    platforms: [],
+    vents: [],
+    rollers: [],
+    hazards: [],
+    enemies: [],
+    collectibles: [],
+    powerups: [],
+    switches: [],
+    doors: [],
+    spawn: { x: 50, y: 460 },
+    exit: { x: SEG_W * REPEATS - 80, y: 460 },
+  };
+
+  for (let i = 0; i < REPEATS; i++) {
+    const dx = i * SEG_W;
+    out.platforms.push(...seg.platforms.map((p) => offsetX(p, dx)));
+    out.vents.push(...seg.vents.map((v) => offsetX(v, dx)));
+    out.rollers.push(...seg.rollers.map((r) => offsetX({
+      ...r,
+      speed: r.speed + i * 0.12,
+      patrolSpeed: (r.patrolSpeed || 2.2) + i * 0.08,
+    }, dx)));
+    out.hazards.push(...seg.hazards.map((h) => offsetX(h, dx)));
+    if (i >= 2) {
+      out.hazards.push(offsetX({ x: 700, y: 560, w: 60, h: 20, type: 'spike' }, dx));
+    }
+    out.enemies.push(...seg.enemies.map((e) => offsetX({
+      ...e,
+      speed: e.speed + i * 0.18,
+    }, dx)));
+    if (i >= 4) {
+      out.enemies.push(offsetX({
+        x: 2700, y: 470, w: 52, h: 52, type: 'bubble',
+        patrol: [2500 + dx, 3200 + dx], speed: 2.8 + i * 0.15,
+      }, dx));
+    }
+    if (i >= 7) {
+      out.enemies.push(offsetX({
+        x: 1200, y: 470, w: 55, h: 55, type: 'bubble',
+        patrol: [900 + dx, 3100 + dx], speed: 3 + i * 0.12, chase: true,
+      }, dx));
+    }
+    out.collectibles.push(...seg.collectibles.map((c) => offsetX(c, dx)));
+    if (i % 2 === 1) {
+      out.collectibles.push(offsetX({ x: 1800, y: 470, type: 'coin' }, dx));
+    }
+    if (i === 2) out.powerups.push(offsetX({ x: 2200, y: 470, type: 0 }, dx));
+    if (i === 5) out.powerups.push(offsetX({ x: 2200, y: 470, type: 4 }, dx));
+    if (i === 8) out.powerups.push(offsetX({ x: 2200, y: 470, type: 7 }, dx));
+  }
+
+  out.powerups.push({ x: out.width - 450, y: 470, type: 0 });
+  out.collectibles.push({ x: out.width - 320, y: 430, type: 'question' });
+  return out;
+}
+
 const LEVEL_DATA = [
   // 1 - Bouncy bubble gum ground
   {
@@ -667,7 +783,7 @@ const LEVEL_DATA = [
     doors: [],
     hazards: [],
     enemies: [
-      { x: 300, y: 470, w: 55, h: 55, type: 'bubble', patrol: [200, 3100], speed: 4, chase: true },
+      { x: 1200, y: 470, w: 55, h: 55, type: 'bubble', patrol: [900, 3100], speed: 3.2, chase: true },
       { x: 1500, y: 470, w: 50, h: 50, type: 'bubble', patrol: [1400, 2000], speed: 3.5 },
       { x: 2500, y: 470, w: 60, h: 60, type: 'bubble', patrol: [2400, 3000], speed: 3.8 },
     ],
@@ -709,7 +825,7 @@ const LEVEL_DATA = [
       { x: 2300, y: 320, w: 80, h: 120, dir: -1, power: 12 },
     ],
     rollers: [
-      { x: 1800, y: 490, r: 35, speed: 3, dir: 1 },
+      { x: 1680, y: 490, r: 35, speed: 3, dir: 1, moveX: [1680, 2550], oneWay: true, patrolSpeed: 2.2 },
     ],
     switches: [],
     doors: [],
@@ -730,48 +846,8 @@ const LEVEL_DATA = [
     exit: { x: 3320, y: 460 },
   },
 
-  // 20 - Final level - Factory summit
-  {
-    name: '工厂之巅',
-    desc: '抵达泡泡糖工厂之巅，完成冒险！',
-    width: 3000,
-    theme: 'victory',
-    platforms: [
-      { x: 0, y: 520, w: 300, h: 80, type: 'normal' },
-      { x: 350, y: 480, w: 80, h: 30, type: 'bouncy' },
-      { x: 500, y: 420, w: 80, h: 30, type: 'bouncy' },
-      { x: 650, y: 360, w: 80, h: 30, type: 'bouncy' },
-      { x: 800, y: 300, w: 80, h: 30, type: 'normal' },
-      { x: 950, y: 260, w: 80, h: 30, type: 'bouncy' },
-      { x: 1100, y: 220, w: 80, h: 30, type: 'bouncy' },
-      { x: 1250, y: 180, w: 80, h: 30, type: 'normal' },
-      { x: 1400, y: 520, w: 200, h: 80, type: 'normal' },
-      { x: 1650, y: 450, w: 80, h: 30, type: 'normal' },
-      { x: 1800, y: 380, w: 80, h: 30, type: 'normal' },
-      { x: 1950, y: 310, w: 80, h: 30, type: 'normal' },
-      { x: 2100, y: 240, w: 80, h: 30, type: 'normal' },
-      { x: 2250, y: 180, w: 200, h: 30, type: 'normal' },
-      { x: 2500, y: 520, w: 500, h: 80, type: 'normal' },
-    ],
-    switches: [],
-    doors: [],
-    hazards: [],
-    enemies: [],
-    collectibles: [
-      { x: 400, y: 430, type: 'coin' },
-      { x: 700, y: 310, type: 'coin' },
-      { x: 1000, y: 210, type: 'question' },
-      { x: 1700, y: 400, type: 'coin' },
-      { x: 2300, y: 130, type: 'coin' },
-    ],
-    powerups: [
-      { x: 550, y: 470, type: 0 },
-      { x: 1150, y: 170, type: 4 },
-      { x: 2000, y: 270, type: 7 },
-    ],
-    spawn: { x: 50, y: 460 },
-    exit: { x: 2920, y: 460 },
-  },
+  // 20 - Final level — 3× level-19 mix gauntlet
+  buildLevel20(),
 ];
 
 const POWERUP_NAMES = [

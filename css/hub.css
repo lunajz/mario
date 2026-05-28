@@ -92,10 +92,14 @@
   box-shadow: 0 4px 0 #4080b0;
 }
 
-.title-letters {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
+.title-img {
+  display: block;
+  max-width: min(92vw, 720px);
+  width: auto;
+  height: auto;
+  margin: 0 auto 12px;
+  image-rendering: pixelated;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
 }
 
 .title-cn {

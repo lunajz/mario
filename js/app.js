@@ -351,14 +351,6 @@ const App = {
     this.bindLore();
     this.loadSettings();
 
-    try {
-      await MarioFont.load();
-      const titleEl = this.$('titleLetters');
-      if (titleEl) MarioFont.renderToElement(titleEl, "MARIO'S STICKY SITUATION", 0.42);
-    } catch (e) {
-      console.warn('Font load skipped', e);
-    }
-
     const session = JSON.parse(localStorage.getItem('bgf_session') || 'null');
     if (session?.nickname && this.$('loginNick')) {
       this.$('loginNick').value = session.nickname;
