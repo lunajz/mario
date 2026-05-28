@@ -39,11 +39,37 @@ const App = {
       game_not_ready: { zh: '游戏未初始化', en: 'Game not initialized' },
       online_badge: { zh: '{n} 在线', en: '{n} online' },
       shop: { zh: '商店', en: 'Shop' },
+      shop_title: { zh: '皮肤商店', en: 'Skin Shop' },
+      shop_free: { zh: '免费', en: 'Free' },
+      shop_equipped: { zh: '已装备 ✓', en: 'Equipped ✓' },
+      shop_equip: { zh: '装备', en: 'Equip' },
+      shop_buy: { zh: '购买 {price} 🪙', en: 'Buy {price} 🪙' },
+      trail_unequip_active: { zh: '卸下拖尾', en: 'Remove trail' },
+      trail_unequip_btn: { zh: '卸下', en: 'Remove' },
+      trail_not_equipped: { zh: '未装备', en: 'Not equipped' },
+      settings_music: { zh: '音乐', en: 'Music' },
+      settings_language: { zh: '语言', en: 'Language' },
+      leaderboard_loading: { zh: '加载中…', en: 'Loading…' },
+      leaderboard_failed: { zh: '加载失败', en: 'Failed to load' },
+      profile_skin: { zh: '皮肤:', en: 'Skin:' },
+      profile_highest: { zh: '最高通关:', en: 'Highest cleared:' },
+      profile_current: { zh: '当前关卡:', en: 'Current level:' },
+      profile_default_skin: { zh: '默认', en: 'Default' },
+      toast_equipped: { zh: '已装备', en: 'Equipped' },
+      toast_purchase_ok: { zh: '购买成功！', en: 'Purchase successful!' },
+      toast_trail_equipped: { zh: '拖尾已装备', en: 'Trail equipped' },
+      toast_trail_removed: { zh: '已卸下拖尾', en: 'Trail removed' },
+      err_insufficient_coins: { zh: '金币不足', en: 'Not enough coins' },
+      debug_coins_title: { zh: '测试用：+100 金币', en: 'Debug: +100 coins' },
       rank: { zh: '排行榜', en: 'Leaderboard' },
       settings: { zh: '设置', en: 'Settings' },
       profile: { zh: '个人中心', en: 'Profile' },
       rules: { zh: '规则', en: 'Rules' },
-      back: { zh: '返回地图', en: 'Back to Map' },
+      rules_p1: { zh: '失败只重试当前关卡。本关获得的金币在失败时清零，重试也不能再拿已收集的金币。', en: 'Death restarts the current level only. Coins collected in that run are lost on death and cannot be collected again on retry.' },
+      rules_p2: { zh: '每关首次通关获得1颗星星，不可重复。商店里用金币购买皮肤。', en: 'First-time clears award one star per level; stars cannot be farmed. Spend coins in the shop for skins.' },
+      rules_p3: { zh: '有其他玩家在线时，系统会随机匹配两人在同一关；碰到对方即失败。可送礼物或攻击。', en: 'When other players are online, you may be matched on the same level; touching them means death. You can send gifts or attacks.' },
+      rules_p4: { zh: '这是陷阱游戏——别相信任何看起来安全的东西。', en: "This is a trap game—don't trust anything that looks safe." },
+      back: { zh: '返回', en: 'Back' },
       press_continue: { zh: '按空格或点击继续', en: 'Press Space or tap to continue' },
       controls_title: { zh: '操作说明', en: 'Controls' },
       controls_pc_label: { zh: '电脑:', en: 'PC:' },
@@ -135,6 +161,7 @@ const App = {
     document.documentElement.lang = this.settings.lang === 'en' ? 'en' : 'zh-CN';
     this.syncLangToggle();
     this.syncSettingsUi();
+    this.syncPageChrome();
     const skipBtn = this.$('btnSkipLore');
     if (skipBtn && this.screen === 'lore') {
       skipBtn.textContent = this.settings.lang === 'en' ? 'Skip' : '跳过';
@@ -146,6 +173,31 @@ const App = {
     else if (this.screen === 'shop') this.renderShop();
     else if (this.screen === 'profile') this.renderProfile();
     else if (this.screen === 'leaderboard') this.loadLeaderboard();
+    else if (this.screen === 'rules') this.renderRulesUi();
+    window.GameController?.refreshGameUi?.();
+  },
+
+  syncPageChrome() {
+    document.querySelectorAll('[data-back-hub]').forEach((btn) => {
+      btn.textContent = this.t('back');
+    });
+    const titles = {
+      shopTitle: 'shop_title',
+      leaderboardTitle: 'rank',
+      settingsTitle: 'settings',
+      profileTitle: 'profile',
+      rulesTitle: 'rules',
+    };
+    Object.entries(titles).forEach(([id, key]) => {
+      const el = this.$(id);
+      if (el) el.textContent = this.t(key);
+    });
+    const musicText = this.$('settingMusicText');
+    if (musicText) musicText.textContent = this.t('settings_music');
+    const langLabel = this.$('settingLangLabel');
+    if (langLabel) langLabel.textContent = this.t('settings_language');
+    const dbg = this.$('btnDebugCoins');
+    if (dbg) dbg.title = this.t('debug_coins_title');
   },
 
   renderLoginUi() {
@@ -195,6 +247,17 @@ const App = {
     if (hubBtn) hubBtn.textContent = this.t('enter_hub');
   },
 
+  renderRulesUi() {
+    const p1 = this.$('rulesP1');
+    if (p1) p1.textContent = this.t('rules_p1');
+    const p2 = this.$('rulesP2');
+    if (p2) p2.textContent = this.t('rules_p2');
+    const p3 = this.$('rulesP3');
+    if (p3) p3.textContent = this.t('rules_p3');
+    const p4 = this.$('rulesP4');
+    if (p4) p4.textContent = this.t('rules_p4');
+  },
+
   bindLangToggle() {
     this.$('langBtnZh')?.addEventListener('click', () => this.setLanguage('zh'));
     this.$('langBtnEn')?.addEventListener('click', () => this.setLanguage('en'));
@@ -210,10 +273,12 @@ const App = {
     if (name === 'shop') this.renderShop();
     if (name === 'leaderboard') this.loadLeaderboard();
     if (name === 'profile') this.renderProfile();
-    if (name === 'settings') this.syncSettingsUi();
+    if (name === 'settings') this.syncPageChrome();
     if (name === 'login') this.renderLoginUi();
     if (name === 'title') this.renderTitleUi();
     if (name === 'controls') this.renderControlsUi();
+    if (name === 'rules') this.renderRulesUi();
+    this.syncPageChrome();
   },
 
   setLoginLoading(loading) {
@@ -285,7 +350,7 @@ const App = {
     const langEl = this.$('settingLang');
     if (langEl) langEl.value = this.settings.lang === 'en' ? 'en' : 'zh';
     this.syncLangToggle();
-    window.GameController?.refreshSnackPanel?.();
+    window.GameController?.refreshGameUi?.();
   },
 
   applyAudioSettings() {
@@ -946,7 +1011,7 @@ const App = {
 
     const priceEl = this.$('skinPrice');
     if (priceEl) {
-      priceEl.textContent = item.price > 0 ? `${item.price} 🪙` : '免费';
+      priceEl.textContent = item.price > 0 ? `${item.price} 🪙` : this.t('shop_free');
     }
 
     const actionEl = this.$('skinAction');
@@ -954,13 +1019,13 @@ const App = {
       actionEl.classList.remove('equipped');
       actionEl.disabled = false;
       if (equipped) {
-        actionEl.textContent = '已装备 ✓';
+        actionEl.textContent = this.t('shop_equipped');
         actionEl.classList.add('equipped');
         actionEl.disabled = true;
       } else if (owned) {
-        actionEl.textContent = '装备';
+        actionEl.textContent = this.t('shop_equip');
       } else {
-        actionEl.textContent = `购买 ${item.price} 🪙`;
+        actionEl.textContent = this.tFormat('shop_buy', { price: item.price });
       }
     }
 
@@ -1024,19 +1089,19 @@ const App = {
       actionEl.classList.remove('equipped');
       actionEl.disabled = false;
       if (equipped) {
-        actionEl.textContent = '已装备 ✓';
+        actionEl.textContent = this.t('shop_equipped');
         actionEl.classList.add('equipped');
         actionEl.disabled = true;
       } else if (owned) {
-        actionEl.textContent = '装备';
+        actionEl.textContent = this.t('shop_equip');
       } else {
-        actionEl.textContent = `购买 ${item.price} 🪙`;
+        actionEl.textContent = this.tFormat('shop_buy', { price: item.price });
       }
     }
     const unequipEl = this.$('trailUnequip');
     if (unequipEl) {
       unequipEl.disabled = !hasTrailEquipped;
-      unequipEl.textContent = hasTrailEquipped ? '卸下拖尾' : '未装备';
+      unequipEl.textContent = hasTrailEquipped ? this.t('trail_unequip_btn') : this.t('trail_not_equipped');
     }
 
     const idxEl = this.$('trailIndex');
@@ -1170,7 +1235,7 @@ const App = {
     if (equipped) return;
     const localRes = this.shopActionLocal(item, owned);
     if (!localRes.ok) { this.showToast(localRes.error); return; }
-    this.showToast(owned ? '已装备' : '购买成功！');
+    this.showToast(owned ? this.t('toast_equipped') : this.t('toast_purchase_ok'));
     this.renderShop();
     this.saveProfile();
   },
@@ -1184,7 +1249,7 @@ const App = {
     if (equipped) return;
     const localRes = this.trailActionLocal(item, owned);
     if (!localRes.ok) { this.showToast(localRes.error); return; }
-    this.showToast(owned ? '拖尾已装备' : '购买成功！');
+    this.showToast(owned ? this.t('toast_trail_equipped') : this.t('toast_purchase_ok'));
     this.renderShop();
     this.saveProfile();
   },
@@ -1193,7 +1258,7 @@ const App = {
     if (!this.profile) return;
     if ((this.profile.trail || 'none') === 'none') return;
     this.profile.trail = 'none';
-    this.showToast('已卸下拖尾');
+    this.showToast(this.t('toast_trail_removed'));
     this.renderShop();
     this.saveProfile();
   },
@@ -1214,7 +1279,7 @@ const App = {
     }
     const coins = Number(this.profile.coins) || 0;
     const price = Number(item.price) || 0;
-    if (coins < price) return { ok: false, error: '金币不足' };
+    if (coins < price) return { ok: false, error: this.t('err_insufficient_coins') };
     this.profile.coins = coins - price;
     const ownedList = Array.isArray(this.profile.owned) ? [...this.profile.owned] : [];
     if (!ownedList.includes(item.id)) ownedList.push(item.id);
@@ -1230,7 +1295,7 @@ const App = {
     }
     const coins = Number(this.profile.coins) || 0;
     const price = Number(item.price) || 0;
-    if (coins < price) return { ok: false, error: '金币不足' };
+    if (coins < price) return { ok: false, error: this.t('err_insufficient_coins') };
     this.profile.coins = coins - price;
     const ownedList = Array.isArray(this.profile.owned) ? [...this.profile.owned] : [];
     if (!ownedList.includes(item.id)) ownedList.push(item.id);
@@ -1240,11 +1305,12 @@ const App = {
   },
 
   async loadLeaderboard() {
+    this.syncPageChrome();
     const list = this.$('leaderboardList');
     if (!list) return;
-    list.innerHTML = '<p>加载中…</p>';
+    list.innerHTML = `<p>${this.t('leaderboard_loading')}</p>`;
     const res = await this.api('leaderboard.php', { action: 'list' });
-    if (!res.ok) { list.innerHTML = '<p>加载失败</p>'; return; }
+    if (!res.ok) { list.innerHTML = `<p>${this.t('leaderboard_failed')}</p>`; return; }
     list.innerHTML = '';
     res.leaderboard.forEach((row, i) => {
       const li = document.createElement('li');
@@ -1254,16 +1320,19 @@ const App = {
   },
 
   renderProfile() {
+    this.syncPageChrome();
     const el = this.$('profileBody');
     if (!el || !this.profile) return;
-    const skinName = SHOP_CATALOG.skins.find((s) => s.id === this.profile.skin)?.name?.zh || '默认';
+    const lang = this.settings.lang;
+    const skin = SHOP_CATALOG.skins.find((s) => s.id === this.profile.skin);
+    const skinName = skin?.name?.[lang] || skin?.name?.zh || this.t('profile_default_skin');
     el.innerHTML = `
       <div class="profile-avatar skin-${this.profile.skin || 'default'}"></div>
       <h3>${this.profile.nickname}</h3>
-      <p>皮肤: ${skinName}</p>
+      <p>${this.t('profile_skin')} ${skinName}</p>
       <p>★ ${this.countStars()} | 🪙 ${this.profile.coins || 0}</p>
-      <p>最高通关: ${Math.max(0, this.highestCompletedLevel(this.profile) + 1)}</p>
-      <p>当前关卡: ${(Number(this.profile.currentLevel) || 0) + 1}</p>
+      <p>${this.t('profile_highest')} ${Math.max(0, this.highestCompletedLevel(this.profile) + 1)}</p>
+      <p>${this.t('profile_current')} ${(Number(this.profile.currentLevel) || 0) + 1}</p>
     `;
   },
 

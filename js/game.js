@@ -27,6 +27,7 @@
   let levelDeathCount = 0;
   let snackOfferVisible = false;
   let hoveredSnackPreviewId = null;
+  let lastDeathReason = null;
   let readyResolve;
   const ready = new Promise((r) => { readyResolve = r; });
   const POWERUP_ICONS = ['👑', '🥚', '💖', '🔥', '🍄', '⚡', '⬆️', '🪽'];
@@ -74,17 +75,206 @@
     }
   }
 
+  const LEVEL_NAMES_EN = [
+    'Bouncy Bubble Gum', 'Gel Slow Zone', 'Bubble Gum Vents', 'Bubble Monsters', 'Cross Factory',
+    'Melting Candy', 'Galaxy Elements', 'Moving Platforms', 'Rest Stop', 'Spinning Rollers',
+    'Fake Platform Trap', 'Elevators', 'Pipe Maze', 'Power-up Gauntlet', 'Spike Array',
+    'Low Gravity Zone', 'Switch Chain', 'Bubble Chase', 'Ultimate Mix', 'Factory Summit',
+  ];
+
+  const POWERUP_LABELS = {
+    zh: [
+      { head: '超级皇冠', detail: '短暂无敌' },
+      { head: '耀西蛋', detail: '额外生命' },
+      { head: '心之花', detail: '恢复生命' },
+      { head: '火焰花', detail: '火焰强化' },
+      { head: '紫蘑菇', detail: '变大' },
+      { head: '加速蘑菇', detail: '速度提升' },
+      { head: '高跳蘑菇', detail: '跳跃强化' },
+      { head: 'Peachette', detail: '滑翔' },
+    ],
+    en: [
+      { head: 'Super Crown', detail: 'Brief invincibility' },
+      { head: 'Yoshi Egg', detail: 'Extra life' },
+      { head: 'Heart Flower', detail: 'Heal' },
+      { head: 'Fire Flower', detail: 'Fire boost' },
+      { head: 'Mega Mushroom', detail: 'Grow big' },
+      { head: 'Speed Mushroom', detail: 'Speed boost' },
+      { head: 'High Jump Mushroom', detail: 'High jump' },
+      { head: 'Peachette', detail: 'Glide' },
+    ],
+  };
+
+  const GAME_UI = {
+    level_label: { zh: '关卡 {n} / 20 - {name}', en: 'Level {n} / 20 - {name}' },
+    coins_label: { zh: '金币: {total}{suffix}', en: 'Coins: {total}{suffix}' },
+    coins_replay_suffix: { zh: ' (本关金币已领取)', en: ' (level coins claimed)' },
+    coins_level_suffix: { zh: ' (本关 {n})', en: ' (this run {n})' },
+    return_hub: { zh: '返回大厅', en: 'Back to Hub' },
+    mp_gift: { zh: '送礼', en: 'Gift' },
+    mp_attack: { zh: '攻击', en: 'Attack' },
+    mp_no_opponent: { zh: '暂无对手', en: 'No opponent' },
+    mp_no_opponent_toast: { zh: '暂无在线对手', en: 'No online opponent' },
+    touch_jump: { zh: '跳', en: 'Jump' },
+    touch_interact: { zh: 'E', en: 'E' },
+    power_snack_active: { zh: '当前零食：{name}', en: 'Active snack: {name}' },
+    power_snack_detail: { zh: '零食生效中，未拾取 Power-up', en: 'Snack active; Power-ups blocked' },
+    power_random: { zh: '随机加成', en: 'Random boost' },
+    power_current: { zh: '当前加成', en: 'Active boost' },
+    power_timer: { zh: '{name}（{time}）', en: '{name} ({time})' },
+    power_effect: { zh: '词条效果：{detail}', en: 'Effect: {detail}' },
+    power_effect_active: { zh: '效果生效中', en: 'Effect active' },
+    death_player: { zh: '碰到了其他玩家！', en: 'You bumped into another player!' },
+    death_default: { zh: '泡泡糖爆炸！点击任意处或按R重试', en: 'Bubble gum burst! Tap anywhere or press R to retry' },
+    game_over_title: { zh: '再试一次!', en: 'Try Again!' },
+    level_complete_title: { zh: '关卡完成!', en: 'Level Complete!' },
+    level_complete_hint: { zh: '按空格或点击任意处继续', en: 'Press Space or tap anywhere to continue' },
+    btn_next: { zh: '下一关', en: 'Next Level' },
+    complete_msg: { zh: '{name} 完成！', en: '{name} cleared!' },
+    complete_star: { zh: ' 获得 ★ 1 颗星星！', en: ' Earned ★ 1 star!' },
+    complete_star_claimed: { zh: ' (本关星星已领取)', en: ' (star already claimed)' },
+    complete_coins: { zh: ' 本关金币 +{n} 已存入银行。', en: ' +{n} coins saved to the bank.' },
+    complete_coins_claimed: { zh: ' (重复游玩，本关金币已领取)', en: ' (replay; level coins already claimed)' },
+    victory_title: { zh: '工厂之巅!', en: 'Factory Summit!' },
+    victory_body: { zh: '马力欧吐掉了最后一口泡泡糖。混乱的噩梦结束了！', en: 'Mario spat out the last piece of bubble gum. The chaotic nightmare is over!' },
+    victory_stats: { zh: '共获得 {stars} 颗星星，银行金币 {coins}！', en: 'Total {stars} stars, {coins} coins in the bank!' },
+    victory_hub: { zh: '返回地图', en: 'Back to Map' },
+    snack_offer_title: { zh: '要不要试一试「零食」？', en: 'Want to try a snack?' },
+    snack_offer_body: { zh: '本关已经失败了 3 次。按空格打开零食菜单，用词条加成再挑战一次。', en: 'You have failed this level 3 times. Press Space to open snacks and boost your next attempt.' },
+    snack_offer_hint: { zh: '按空格打开零食 · 点击取消将重新开始本关', en: 'Press Space for snacks · Cancel restarts the level' },
+    snack_offer_cancel: { zh: '取消', en: 'Cancel' },
+    toast_snack_off: { zh: '已关闭零食效果', en: 'Snack effect turned off' },
+    toast_no_coins: { zh: '金币不足', en: 'Not enough coins' },
+    toast_snack_on: { zh: '零食生效，期间不会捡起 Power-up', en: 'Snack active; Power-ups will be blocked' },
+    toast_powerup_blocked: { zh: '零食生效中，未拾取 Power-up', en: 'Snack active; Power-up not collected' },
+    toast_retry_r: { zh: '已按 R 重试当前关卡', en: 'Retried current level (R)' },
+    unknown_snack: { zh: '未知零食', en: 'Unknown snack' },
+  };
+
   function show(el) { if (el) el.classList.remove('hidden'); }
   function hide(el) { if (el) el.classList.add('hidden'); }
 
   function showSnackOfferDialog() {
     snackOfferVisible = true;
+    updateSnackOfferUi();
     show($('snackOfferDialog'));
   }
 
   function hideSnackOfferDialog() {
     snackOfferVisible = false;
     hide($('snackOfferDialog'));
+  }
+
+  function gameUi(key) {
+    const lang = snackLang();
+    return GAME_UI[key]?.[lang] || GAME_UI[key]?.zh || key;
+  }
+
+  function gameUiFormat(key, vars = {}) {
+    let text = gameUi(key);
+    Object.entries(vars).forEach(([k, v]) => {
+      text = text.replaceAll(`{${k}}`, String(v));
+    });
+    return text;
+  }
+
+  function levelDisplayName(levelIndex = currentLevel) {
+    const ld = LEVEL_DATA[levelIndex];
+    if (!ld) return '';
+    if (snackLang() === 'en') return LEVEL_NAMES_EN[levelIndex] || ld.name;
+    return ld.name;
+  }
+
+  function powerupLabel(powerType) {
+    const lang = snackLang();
+    const list = POWERUP_LABELS[lang] || POWERUP_LABELS.zh;
+    return list[powerType] || { head: `${gameUi('power_effect_active')} ${powerType + 1}`, detail: gameUi('power_effect_active') };
+  }
+
+  function updateSnackOfferUi() {
+    const title = $('snackOfferTitle');
+    if (title) title.textContent = gameUi('snack_offer_title');
+    const body = $('snackOfferBody');
+    if (body) body.innerHTML = snackLang() === 'en'
+      ? 'You have failed this level 3 times. Press <strong>Space</strong> to open snacks and boost your next attempt.'
+      : '本关已经失败了 3 次。按<strong>空格</strong>打开零食菜单，用词条加成再挑战一次。';
+    const hint = $('snackOfferHint');
+    if (hint) hint.textContent = gameUi('snack_offer_hint');
+    const cancel = $('btnSnackOfferCancel');
+    if (cancel) cancel.textContent = gameUi('snack_offer_cancel');
+  }
+
+  function updateGameOverUi() {
+    const title = $('gameOverTitle');
+    if (title) title.textContent = gameUi('game_over_title');
+    const msg = $('gameOverMsg');
+    if (msg) {
+      msg.textContent = lastDeathReason === 'player'
+        ? gameUi('death_player')
+        : gameUi('death_default');
+    }
+  }
+
+  function updateLevelCompleteUi() {
+    const title = $('levelCompleteTitle');
+    if (title) title.textContent = gameUi('level_complete_title');
+    const hint = $('levelCompleteHint');
+    if (hint) hint.textContent = gameUi('level_complete_hint');
+    const btn = $('btnNext');
+    if (btn) btn.textContent = gameUi('btn_next');
+    const msgEl = $('levelCompleteMsg');
+    if (!msgEl) return;
+    const ls = profile?.levelStars || [];
+    const alreadyCleared = !!ls[currentLevel];
+    const coinsToBank = alreadyCleared ? 0 : levelCoins;
+    let msg = gameUiFormat('complete_msg', { name: levelDisplayName(currentLevel) });
+    if (earnedStar) msg += gameUi('complete_star');
+    else msg += gameUi('complete_star_claimed');
+    if (coinsToBank > 0) msg += gameUiFormat('complete_coins', { n: coinsToBank });
+    else if (alreadyCleared) msg += gameUi('complete_coins_claimed');
+    msgEl.textContent = msg;
+  }
+
+  function updateVictoryUi() {
+    const title = $('victoryTitle');
+    if (title) title.textContent = gameUi('victory_title');
+    const body = $('victoryBody');
+    if (body) body.textContent = gameUi('victory_body');
+    const stats = $('victoryStats');
+    if (stats) {
+      stats.textContent = gameUiFormat('victory_stats', {
+        stars: App?.countStars?.() || 0,
+        coins: bankCoins,
+      });
+    }
+    const hubBtn = $('btnVictoryHub');
+    if (hubBtn) hubBtn.textContent = gameUi('victory_hub');
+  }
+
+  function updateGameChrome() {
+    updateSnackPanelChrome();
+    updateSnackOfferUi();
+    const hubBtn = $('btnHub');
+    if (hubBtn) hubBtn.textContent = gameUi('return_hub');
+    const giftBtn = $('btnMpGift');
+    if (giftBtn) giftBtn.textContent = gameUi('mp_gift');
+    const attackBtn = $('btnMpAttack');
+    if (attackBtn) attackBtn.textContent = gameUi('mp_attack');
+    const snackToggle = $('btnSnackPanel');
+    if (snackToggle) snackToggle.textContent = snackUi('btn_toggle');
+    const jumpBtn = $('btnJump');
+    if (jumpBtn) jumpBtn.textContent = gameUi('touch_jump');
+    const interactBtn = $('btnInteract');
+    if (interactBtn) interactBtn.textContent = gameUi('touch_interact');
+    updateGameOverUi();
+    updateLevelCompleteUi();
+    updateVictoryUi();
+  }
+
+  function refreshGameUi() {
+    updateGameChrome();
+    updateHUD();
+    updateSnackPanel();
   }
 
   const SNACK_UI = {
@@ -121,7 +311,7 @@
   }
 
   function snackName(snackId) {
-    return snackLocalizedName(snackId) || snackId || '未知零食';
+    return snackLocalizedName(snackId) || snackId || gameUi('unknown_snack');
   }
 
   function snackDescText(snackId) {
@@ -208,7 +398,7 @@
   function deactivateSnackEffect({ silent = false } = {}) {
     activeSnackId = null;
     if (player?.powerSource === 'snack') engine.clearPower(player);
-    if (!silent) App?.showToast?.('已关闭零食效果');
+    if (!silent) App?.showToast?.(gameUi('toast_snack_off'));
     updateSnackPanel();
     updateHUD();
   }
@@ -220,7 +410,7 @@
     if (!levelSnackUnlocked[snackId] && !skipCost) {
       const price = Number(snack.price) || 0;
       if ((profile.coins || 0) < price) {
-        App?.showToast?.('金币不足');
+        App?.showToast?.(gameUi('toast_no_coins'));
         return false;
       }
       profile.coins -= price;
@@ -233,7 +423,7 @@
     activeSnackId = snackId;
     applySnackEffectToPlayer(snackId);
     showSnackPreview(snackId);
-    if (!silent) App?.showToast?.('零食生效，期间不会捡起 Power-up');
+    if (!silent) App?.showToast?.(gameUi('toast_snack_on'));
     updateSnackPanel();
     updateHUD();
     return true;
@@ -336,12 +526,19 @@
     if (player) levelCoins = player.levelCoins || 0;
     const ld = LEVEL_DATA[currentLevel];
     const label = $('levelLabel');
-    if (label && ld) label.textContent = `关卡 ${currentLevel + 1} / 20 - ${ld.name}`;
+    if (label && ld) {
+      label.textContent = gameUiFormat('level_label', {
+        n: currentLevel + 1,
+        name: levelDisplayName(currentLevel),
+      });
+    }
     const coinEl = $('coinLabel');
     if (coinEl) {
       const replay = isLevelCleared();
-      const suffix = replay ? ' (本关金币已领取)' : ` (本关 ${levelCoins})`;
-      coinEl.textContent = `金币: ${totalDisplay()}${suffix}`;
+      const suffix = replay
+        ? gameUi('coins_replay_suffix')
+        : gameUiFormat('coins_level_suffix', { n: levelCoins });
+      coinEl.textContent = gameUiFormat('coins_label', { total: totalDisplay(), suffix });
     }
     updatePowerNotice(gameState === 'playing');
     const mp = $('mpActions');
@@ -355,7 +552,7 @@
           if (remotePlayer && remoteMatch?.level === currentLevel) {
             opp.textContent = remoteMatch.opponent || remotePlayer.nickname || '';
           } else {
-            opp.textContent = snackLang() === 'en' ? 'No opponent' : '暂无对手';
+            opp.textContent = gameUi('mp_no_opponent');
           }
         }
       }
@@ -382,26 +579,26 @@
     if (notice.classList.contains('hidden')) {
       notice.classList.remove('hidden');
     }
-    const fullName = (typeof POWERUP_NAMES !== 'undefined' && POWERUP_NAMES[player.powerType])
-      ? POWERUP_NAMES[player.powerType]
-      : `效果 ${player.powerType + 1}`;
-    const [headNameRaw, effectDetailRaw] = String(fullName).split(' - ');
-    const shortName = (headNameRaw || '').trim();
-    const effectDetail = (effectDetailRaw || '').trim();
+    const { head: shortName, detail: effectDetail } = powerupLabel(player.powerType);
     const remainText = remainMs >= 1000
       ? `${Math.ceil(remainMs / 1000)}s`
       : `${Math.max(0.1, remainMs / 1000).toFixed(1)}s`;
     const isRandom = player.powerSource === 'random';
     if (player.powerSource === 'snack' && activeSnackId) {
-      mainEl.textContent = `当前零食：${snackName(activeSnackId)}`;
-      detailEl.textContent = '零食生效中，未拾取 Power-up';
+      mainEl.textContent = gameUiFormat('power_snack_active', { name: snackName(activeSnackId) });
+      detailEl.textContent = gameUi('power_snack_detail');
       iconEl.classList.remove('sprite');
       iconEl.style.backgroundPosition = '';
       iconEl.textContent = '🍬';
       return;
     }
-    mainEl.textContent = `${isRandom ? '随机加成' : '当前加成'}：${shortName}（${remainText}）`;
-    detailEl.textContent = `词条效果：${effectDetail || '效果生效中'}`;
+    mainEl.textContent = gameUiFormat('power_timer', {
+      name: `${isRandom ? gameUi('power_random') : gameUi('power_current')}: ${shortName}`,
+      time: remainText,
+    });
+    detailEl.textContent = gameUiFormat('power_effect', {
+      detail: effectDetail || gameUi('power_effect_active'),
+    });
     const spritePos = POWERUP_SPRITE_POS[player.powerType];
     if (spritePos) {
       iconEl.classList.add('sprite');
@@ -463,6 +660,7 @@
     if (typeof gameAudio !== 'undefined') {
       gameAudio.startLevelBGM(currentLevel);
     }
+    updateGameChrome();
     updateHUD();
     engine.render(player);
   }
@@ -500,10 +698,8 @@
   function nextLevel() {
     if (currentLevel >= LEVEL_DATA.length - 1) {
       gameState = 'victory';
+      updateVictoryUi();
       show($('victory'));
-      if ($('victoryStats')) {
-        $('victoryStats').textContent = `共获得 ${App?.countStars?.() || 0} 颗星星，银行金币 ${bankCoins}！`;
-      }
       gameAudio?.playSting('victory');
       return;
     }
@@ -521,6 +717,7 @@
     resetInputState();
     levelCoins = 0;
     levelDeathCount += 1;
+    lastDeathReason = reason;
     engine.spawnDeathSplat(player, profile?.splat);
     const mute = profile?.muteDev;
     gameAudio?.playSting('death', mute);
@@ -528,11 +725,7 @@
     const go = $('gameOver');
     show(go);
     go?.classList.add('anim-death');
-    if ($('gameOverMsg')) {
-      $('gameOverMsg').textContent = reason === 'player'
-        ? '碰到了其他玩家！'
-        : '泡泡糖爆炸！点击任意处或按R重试';
-    }
+    updateGameOverUi();
     if (levelDeathCount >= 3 && levelDeathCount % 3 === 0) {
       showSnackOfferDialog();
     }
@@ -550,13 +743,7 @@
     show(lc);
     lc?.classList.add('anim-win');
     gameAudio?.playSting('win');
-    const ld = LEVEL_DATA[currentLevel];
-    let msg = `${ld.name} 完成！`;
-    if (earnedStar) msg += ' 获得 ★ 1 颗星星！';
-    else msg += ' (本关星星已领取)';
-    if (coinsToBank > 0) msg += ` 本关金币 +${coinsToBank} 已存入银行。`;
-    else if (alreadyCleared) msg += ' (重复游玩，本关金币已领取)';
-    if ($('levelCompleteMsg')) $('levelCompleteMsg').textContent = msg;
+    updateLevelCompleteUi();
     if (coinsToBank > 0) {
       bankCoins += coinsToBank;
       if (profile) profile.coins = bankCoins;
@@ -592,7 +779,7 @@
             const now = performance.now();
             if (now - blockedPowerupToastAt > 1200) {
               blockedPowerupToastAt = now;
-              App?.showToast?.('零食生效中，未拾取 Power-up');
+              App?.showToast?.(gameUi('toast_powerup_blocked'));
             }
           },
         });
@@ -648,7 +835,7 @@
       e.preventDefault();
       const wasDead = gameState === 'dead';
       restartCurrentLevel();
-      if (!wasDead) App?.showToast?.('已按 R 重试当前关卡');
+      if (!wasDead) App?.showToast?.(gameUi('toast_retry_r'));
       return;
     }
     if (e.code === 'Space' && !e.repeat) {
@@ -720,12 +907,12 @@
   $('btnMpGift')?.addEventListener('click', () => {
     const to = remoteMatch?.opponent || remotePlayer?.nickname;
     if (to) Multiplayer.send('gift', to);
-    else App?.showToast?.(snackLang() === 'en' ? 'No online opponent' : '暂无在线对手');
+    else App?.showToast?.(gameUi('mp_no_opponent_toast'));
   });
   $('btnMpAttack')?.addEventListener('click', () => {
     const to = remoteMatch?.opponent || remotePlayer?.nickname;
     if (to) Multiplayer.send('attack', to);
-    else App?.showToast?.(snackLang() === 'en' ? 'No online opponent' : '暂无在线对手');
+    else App?.showToast?.(gameUi('mp_no_opponent_toast'));
   });
 
   window.addEventListener('resize', () => engine.resize());
@@ -738,7 +925,7 @@
     await engine.loadImages();
     imagesReady = true;
     buildSnackPanelList();
-    updateSnackPanelChrome();
+    updateGameChrome();
     setSnackPanelOpen(false);
 
     player = engine.createPlayer({ x: 80, y: 460 });
@@ -762,6 +949,7 @@
     triggerRemoteHit,
     refreshSnackPreview,
     refreshSnackPanel,
+    refreshGameUi,
     get currentLevel() { return currentLevel; },
     get player() { return player; },
     get gameState() { return gameState; },

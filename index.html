@@ -89,7 +89,7 @@
   <section id="shopScreen" data-screen="shop" class="app-screen hidden shop-screen">
     <header class="sub-header">
       <button data-back-hub class="btn-back">返回</button>
-      <h2>皮肤商店</h2>
+      <h2 id="shopTitle">皮肤商店</h2>
       <span><span id="shopCoins">0</span> 🪙</span>
       <button id="btnDebugCoins" class="btn-debug hidden" type="button" title="测试用：+100 金币">+100 🪙</button>
     </header>
@@ -139,7 +139,7 @@
   <section id="leaderboardScreen" data-screen="leaderboard" class="app-screen hidden">
     <header class="sub-header">
       <button data-back-hub class="btn-back">返回</button>
-      <h2>排行榜</h2>
+      <h2 id="leaderboardTitle">排行榜</h2>
     </header>
     <ol id="leaderboardList" class="leaderboard-list"></ol>
   </section>
@@ -147,11 +147,11 @@
   <section id="settingsScreen" data-screen="settings" class="app-screen hidden">
     <header class="sub-header">
       <button data-back-hub class="btn-back">返回</button>
-      <h2>设置</h2>
+      <h2 id="settingsTitle">设置</h2>
     </header>
     <div class="panel settings-panel">
-      <label><input type="checkbox" id="settingMusic" checked> 音乐</label>
-      <label>语言
+      <label id="settingMusicLabel"><input type="checkbox" id="settingMusic" checked> <span id="settingMusicText">音乐</span></label>
+      <label><span id="settingLangLabel">语言</span>
         <select id="settingLang">
           <option value="zh">中文</option>
           <option value="en">English</option>
@@ -163,21 +163,21 @@
   <section id="profileScreen" data-screen="profile" class="app-screen hidden">
     <header class="sub-header">
       <button data-back-hub class="btn-back">返回</button>
-      <h2>个人中心</h2>
+      <h2 id="profileTitle">个人中心</h2>
     </header>
     <div id="profileBody" class="panel profile-panel"></div>
   </section>
 
   <section id="rulesScreen" data-screen="rules" class="app-screen hidden">
     <header class="sub-header">
-      <button data-back-hub class="btn-back">返回</button>
-      <h2>规则</h2>
+      <button id="rulesBackBtn" data-back-hub class="btn-back">返回</button>
+      <h2 id="rulesTitle">规则</h2>
     </header>
     <div class="panel rules-panel">
-      <p>失败只重试当前关卡。本关获得的金币在失败时清零，重试也不能再拿已收集的金币。</p>
-      <p>每关首次通关获得1颗星星，不可重复。商店里用金币购买皮肤。</p>
-      <p>有其他玩家在线时，系统会随机匹配两人在同一关；碰到对方即失败。可送礼物或攻击。</p>
-      <p>这是陷阱游戏——别相信任何看起来安全的东西。</p>
+      <p id="rulesP1">失败只重试当前关卡。本关获得的金币在失败时清零，重试也不能再拿已收集的金币。</p>
+      <p id="rulesP2">每关首次通关获得1颗星星，不可重复。商店里用金币购买皮肤。</p>
+      <p id="rulesP3">有其他玩家在线时，系统会随机匹配两人在同一关；碰到对方即失败。可送礼物或攻击。</p>
+      <p id="rulesP4">这是陷阱游戏——别相信任何看起来安全的东西。</p>
     </div>
   </section>
 
@@ -228,32 +228,32 @@
     </div>
     <div id="snackOfferDialog" class="overlay snack-offer-overlay hidden">
       <div class="panel snack-offer-panel">
-        <h2>要不要试一试「零食」？</h2>
-        <p>本关已经失败了 3 次。按<strong>空格</strong>打开零食菜单，用词条加成再挑战一次。</p>
-        <p class="hint">按空格打开零食 · 点击取消将重新开始本关</p>
+        <h2 id="snackOfferTitle">要不要试一试「零食」？</h2>
+        <p id="snackOfferBody">本关已经失败了 3 次。按<strong>空格</strong>打开零食菜单，用词条加成再挑战一次。</p>
+        <p id="snackOfferHint" class="hint">按空格打开零食 · 点击取消将重新开始本关</p>
         <button id="btnSnackOfferCancel" type="button" class="btn-secondary">取消</button>
       </div>
     </div>
     <div id="levelComplete" class="overlay hidden">
       <div class="panel star-burst">
-        <h2>关卡完成!</h2>
+        <h2 id="levelCompleteTitle">关卡完成!</h2>
         <div class="star-icon">★</div>
         <p id="levelCompleteMsg"></p>
-        <p class="hint">按空格或点击任意处继续</p>
+        <p id="levelCompleteHint" class="hint">按空格或点击任意处继续</p>
         <button id="btnNext" class="btn-primary">下一关</button>
       </div>
     </div>
     <div id="gameOver" class="overlay hidden tap-anywhere">
       <div class="panel splat-panel">
         <div class="splat-blob"></div>
-        <h2>再试一次!</h2>
+        <h2 id="gameOverTitle">再试一次!</h2>
         <p id="gameOverMsg">点击任意处或按R重试</p>
       </div>
     </div>
     <div id="victory" class="overlay hidden">
       <div class="panel victory-panel">
-        <h1>工厂之巅!</h1>
-        <p>马力欧吐掉了最后一口泡泡糖。混乱的噩梦结束了！</p>
+        <h1 id="victoryTitle">工厂之巅!</h1>
+        <p id="victoryBody">马力欧吐掉了最后一口泡泡糖。混乱的噩梦结束了！</p>
         <p class="stats" id="victoryStats"></p>
         <button id="btnVictoryHub" class="btn-primary">返回地图</button>
       </div>
@@ -277,8 +277,8 @@
   <script src="js/shop.js?v=20260528p"></script>
   <script src="js/audio.js?v=20260523"></script>
   <script src="js/engine.js?v=20260528d"></script>
-  <script src="js/game.js?v=20260528v"></script>
+  <script src="js/game.js?v=20260529a"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
-  <script src="js/app.js?v=20260529b"></script>
+  <script src="js/app.js?v=20260529e"></script>
 </body>
 </html>
