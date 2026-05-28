@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Mario's Sticky Situation - 马里奥的黏腻处境</title>
   <link rel="stylesheet" href="css/style.css?v=20260523">
-  <link rel="stylesheet" href="css/hub.css?v=20260527l">
+  <link rel="stylesheet" href="css/hub.css?v=20260528d">
 </head>
 <body>
   <section id="loginScreen" data-screen="login" class="app-screen">
@@ -85,19 +85,46 @@
       <span><span id="shopCoins">0</span> 🪙</span>
       <button id="btnDebugCoins" class="btn-debug" type="button" title="测试用：+100 金币">+100 🪙</button>
     </header>
-    <div id="skinCarousel" class="skin-carousel" aria-roledescription="carousel">
-      <button id="skinPrev" class="carousel-arrow carousel-arrow-prev" aria-label="上一个">&#8249;</button>
-      <div class="carousel-stage">
-        <div id="skinPreview" class="skin-preview" role="img" aria-label="皮肤预览"></div>
-        <div class="carousel-info">
-          <h3 id="skinName" class="skin-name">—</h3>
-          <p id="skinDesc" class="skin-desc"></p>
-          <p id="skinPrice" class="skin-price"></p>
-          <button id="skinAction" class="btn-primary skin-action">购买</button>
+    <div class="shop-stack">
+      <div id="skinCarousel" class="skin-carousel" aria-roledescription="carousel">
+        <button id="skinPrev" class="carousel-arrow carousel-arrow-prev" aria-label="上一个">&#8249;</button>
+        <div class="carousel-stage">
+          <div id="skinPreview" class="skin-preview" role="img" aria-label="皮肤预览"></div>
+          <div class="carousel-info">
+            <h3 id="skinName" class="skin-name">—</h3>
+            <p id="skinDesc" class="skin-desc"></p>
+            <p id="skinPrice" class="skin-price"></p>
+            <button id="skinAction" class="btn-primary skin-action">购买</button>
+          </div>
+          <p id="skinIndex" class="carousel-index">1 / 1</p>
         </div>
-        <p id="skinIndex" class="carousel-index">1 / 1</p>
+        <button id="skinNext" class="carousel-arrow carousel-arrow-next" aria-label="下一个">&#8250;</button>
       </div>
-      <button id="skinNext" class="carousel-arrow carousel-arrow-next" aria-label="下一个">&#8250;</button>
+
+      <div id="trailCarousel" class="skin-carousel trail-carousel" aria-roledescription="carousel">
+        <button id="trailPrev" class="carousel-arrow carousel-arrow-prev" aria-label="上一个拖尾">&#8249;</button>
+        <div class="carousel-stage">
+          <div id="trailPreviewBox" class="trail-preview" role="img" aria-label="拖尾预览">
+            <canvas id="trailPreviewCanvas" class="trail-preview-canvas" aria-hidden="true"></canvas>
+          </div>
+          <div id="trailPalette" class="trail-palette" aria-label="拖尾主色">
+            <span class="trail-swatch"></span>
+            <span class="trail-swatch"></span>
+            <span class="trail-swatch"></span>
+          </div>
+          <div class="carousel-info">
+            <h3 id="trailName" class="skin-name">—</h3>
+            <p id="trailDesc" class="skin-desc"></p>
+            <p id="trailPrice" class="skin-price"></p>
+            <div class="trail-action-row">
+              <button id="trailAction" class="btn-primary skin-action">购买</button>
+              <button id="trailUnequip" class="btn-back trail-unequip" type="button">卸下</button>
+            </div>
+          </div>
+          <p id="trailIndex" class="carousel-index">1 / 1</p>
+        </div>
+        <button id="trailNext" class="carousel-arrow carousel-arrow-next" aria-label="下一个拖尾">&#8250;</button>
+      </div>
     </div>
   </section>
 
@@ -207,6 +234,6 @@
   <script src="js/engine.js?v=20260527o"></script>
   <script src="js/game.js?v=20260527a"></script>
   <script src="js/multiplayer.js?v=20260523"></script>
-  <script src="js/app.js?v=20260527g"></script>
+  <script src="js/app.js?v=20260528g"></script>
 </body>
 </html>

@@ -25,6 +25,7 @@ if ($action === 'save') {
     $users[$idx]['maxLevel'] = intval($input['maxLevel'] ?? ($users[$idx]['maxLevel'] ?? 0));
     $users[$idx]['currentLevel'] = max(0, min(19, intval($input['currentLevel'] ?? ($users[$idx]['currentLevel'] ?? 0))));
     if (isset($input['skin'])) $users[$idx]['skin'] = $input['skin'];
+    if (isset($input['trail'])) $users[$idx]['trail'] = $input['trail'];
     if (isset($input['owned'])) $users[$idx]['owned'] = $input['owned'];
     if (isset($input['equipped'])) $users[$idx]['equipped'] = $input['equipped'];
     if (isset($input['muteDev'])) $users[$idx]['muteDev'] = (bool)$input['muteDev'];

@@ -188,6 +188,7 @@ const App = {
         maxLevel: profile.maxLevel ?? 0,
         currentLevel: profile.currentLevel ?? 0,
         skin: profile.skin || 'skin_default',
+        trail: profile.trail || 'none',
         owned: profile.owned || ['skin_default'],
         updated: Date.now(),
       }));
@@ -209,6 +210,7 @@ const App = {
     p.coins = Number(p.coins) || 0;
     p.stars = p.levelStars.filter(Boolean).length || Number(p.stars) || 0;
     p.currentLevel = Math.max(0, Math.min(19, Number(p.currentLevel) || 0));
+    p.trail = p.trail || 'none';
     this.syncMaxLevel(p);
     const max = this.highestUnlockedLevel(p);
     if (p.currentLevel > max) p.currentLevel = max;
@@ -238,6 +240,7 @@ const App = {
       currentLevel: Number.isFinite(cachedLevel) ? cachedLevel : (Number.isFinite(serverLevel) ? serverLevel : 0),
       owned: mergedOwned.length ? mergedOwned : (server.owned || ['skin_default']),
       skin: cached.skin || server.skin || 'skin_default',
+      trail: cached.trail || server.trail || 'none',
     };
     return this.normalizeProfile(out);
   },
@@ -269,6 +272,7 @@ const App = {
       maxLevel: this.profile.maxLevel,
       currentLevel: this.profile.currentLevel ?? 0,
       skin: this.profile.skin,
+      trail: this.profile.trail,
       owned: this.profile.owned,
       muteDev: this.profile.muteDev,
       achievements: this.profile.achievements,
@@ -665,11 +669,20 @@ const App = {
     const skins = SHOP_CATALOG.skins || [];
     const equippedIdx = skins.findIndex((s) => s.id === this.profile?.skin);
     if (equippedIdx >= 0) this.shopIndex = equippedIdx;
+    this.trailIndex = 0;
+    const trails = SHOP_CATALOG.trails || [];
+    const equippedTrailIdx = trails.findIndex((t) => t.id === (this.profile?.trail || 'none'));
+    if (equippedTrailIdx >= 0) this.trailIndex = equippedTrailIdx;
 
     this.$('skinPrev')?.addEventListener('click', () => this.shopStep(-1));
     this.$('skinNext')?.addEventListener('click', () => this.shopStep(1));
     this.$('skinAction')?.addEventListener('click', () => this.shopAction());
+    this.$('trailPrev')?.addEventListener('click', () => this.trailStep(-1));
+    this.$('trailNext')?.addEventListener('click', () => this.trailStep(1));
+    this.$('trailAction')?.addEventListener('click', () => this.trailAction());
+    this.$('trailUnequip')?.addEventListener('click', () => this.unequipTrail());
     this.$('btnDebugCoins')?.addEventListener('click', () => this.debugAddCoins(100));
+    this.startTrailPreviewLoop();
 
     document.addEventListener('keydown', (e) => {
       if (this.screen !== 'shop') return;
@@ -697,12 +710,35 @@ const App = {
         else if (dx >= SWIPE) this.shopStep(-1);
       });
     }
+    const trailCarousel = this.$('trailCarousel');
+    if (trailCarousel) {
+      let startX = 0;
+      let active = false;
+      const SWIPE = 40;
+      trailCarousel.addEventListener('touchstart', (e) => {
+        if (!e.touches[0]) return;
+        startX = e.touches[0].clientX;
+        active = true;
+      }, { passive: true });
+      trailCarousel.addEventListener('touchend', (e) => {
+        if (!active) return;
+        active = false;
+        const endX = e.changedTouches[0]?.clientX ?? startX;
+        const dx = endX - startX;
+        if (dx <= -SWIPE) this.trailStep(1);
+        else if (dx >= SWIPE) this.trailStep(-1);
+      });
+    }
   },
 
   renderShop() {
     const coinsEl = this.$('shopCoins');
     if (coinsEl) coinsEl.textContent = this.profile?.coins || 0;
+    this.renderSkinCarousel();
+    this.renderTrailCarousel();
+  },
 
+  renderSkinCarousel() {
     const skins = SHOP_CATALOG.skins || [];
     if (!skins.length) return;
     const total = skins.length;
@@ -749,6 +785,81 @@ const App = {
     if (idxEl) idxEl.textContent = `${this.shopIndex + 1} / ${total}`;
   },
 
+  renderTrailCarousel() {
+    const trails = SHOP_CATALOG.trails || [];
+    if (!trails.length) return;
+    const total = trails.length;
+    if (this.trailIndex == null) this.trailIndex = 0;
+    this.trailIndex = ((this.trailIndex % total) + total) % total;
+    const item = trails[this.trailIndex];
+    const lang = this.settings.lang;
+    const owned = (this.profile?.owned || []).includes(item.id);
+    const equipped = (this.profile?.trail || 'none') === item.id;
+    const hasTrailEquipped = (this.profile?.trail || 'none') !== 'none';
+    const descMap = {
+      trail_glitter: {
+        zh: '奔跑时留下闪亮糖粉尾迹。',
+        en: 'Sparkling glitter follows each step.',
+      },
+      trail_bubble: {
+        zh: '一串轻盈泡泡跟随移动。',
+        en: 'A stream of bubbles trails behind you.',
+      },
+      trail_wrappers: {
+        zh: '彩色包装纸碎片在身后飘散。',
+        en: 'Candy wrapper confetti drifts behind.',
+      },
+    };
+    const trailColors = {
+      trail_glitter: ['#ffd700', '#ff69b4', '#ffffff'],
+      trail_bubble: ['#ffb6d9', '#ffffff', '#ffdff0'],
+      trail_wrappers: ['#ff3366', '#33cc33', '#ffd700'],
+    };
+
+    const preview = this.$('trailPreviewBox');
+    if (preview) {
+      preview.className = `trail-preview ${item.id}`;
+    }
+    this.trailPreviewType = item.id;
+    const palette = this.$('trailPalette');
+    if (palette) {
+      const swatches = Array.from(palette.querySelectorAll('.trail-swatch'));
+      const colors = trailColors[item.id] || ['#cccccc', '#dddddd', '#eeeeee'];
+      swatches.forEach((el, idx) => {
+        el.style.background = colors[idx] || colors[colors.length - 1] || '#ddd';
+      });
+    }
+    const nameEl = this.$('trailName');
+    if (nameEl) nameEl.textContent = item.name[lang] || item.name.zh || item.id;
+    const descEl = this.$('trailDesc');
+    if (descEl) descEl.textContent = descMap[item.id]?.[lang] || descMap[item.id]?.zh || '';
+    const priceEl = this.$('trailPrice');
+    if (priceEl) priceEl.textContent = `${item.price} 🪙`;
+
+    const actionEl = this.$('trailAction');
+    if (actionEl) {
+      actionEl.classList.remove('equipped');
+      actionEl.disabled = false;
+      if (equipped) {
+        actionEl.textContent = '已装备 ✓';
+        actionEl.classList.add('equipped');
+        actionEl.disabled = true;
+      } else if (owned) {
+        actionEl.textContent = '装备';
+      } else {
+        actionEl.textContent = `购买 ${item.price} 🪙`;
+      }
+    }
+    const unequipEl = this.$('trailUnequip');
+    if (unequipEl) {
+      unequipEl.disabled = !hasTrailEquipped;
+      unequipEl.textContent = hasTrailEquipped ? '卸下拖尾' : '未装备';
+    }
+
+    const idxEl = this.$('trailIndex');
+    if (idxEl) idxEl.textContent = `${this.trailIndex + 1} / ${total}`;
+  },
+
   shopStep(delta) {
     const skins = SHOP_CATALOG.skins || [];
     if (!skins.length) return;
@@ -762,6 +873,111 @@ const App = {
     this.renderShop();
   },
 
+  trailStep(delta) {
+    const trails = SHOP_CATALOG.trails || [];
+    if (!trails.length) return;
+    this.trailIndex = (((this.trailIndex || 0) + delta) % trails.length + trails.length) % trails.length;
+    const preview = this.$('trailPreviewBox');
+    if (preview) {
+      const cls = delta > 0 ? 'swipe-left' : 'swipe-right';
+      preview.classList.add(cls);
+      setTimeout(() => preview.classList.remove(cls), 150);
+    }
+    this.renderTrailCarousel();
+  },
+
+  startTrailPreviewLoop() {
+    if (this._trailPreviewRaf) return;
+    this._trailPreviewState = this._trailPreviewState || {
+      particles: [],
+      lastTs: 0,
+      trailTimer: 0,
+      player: { x: 70, y: 18, w: 32, h: 48, trail: 'trail_glitter' },
+    };
+    const tick = (ts) => {
+      this.drawTrailPreview(ts);
+      this._trailPreviewRaf = requestAnimationFrame(tick);
+    };
+    this._trailPreviewRaf = requestAnimationFrame(tick);
+  },
+
+  drawTrailPreview(ts) {
+    const canvas = this.$('trailPreviewCanvas');
+    if (!canvas || this.screen !== 'shop') return;
+    const st = this._trailPreviewState;
+    if (!st) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 260;
+    const cssH = canvas.clientHeight || 96;
+    const w = Math.max(1, Math.floor(cssW * dpr));
+    const h = Math.max(1, Math.floor(cssH * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const dt = st.lastTs ? Math.min(34, ts - st.lastTs) : 16;
+    st.lastTs = ts;
+    const trailId = this.trailPreviewType || 'trail_glitter';
+    st.player.trail = trailId;
+
+    ctx.clearRect(0, 0, cssW, cssH);
+    const bg = ctx.createLinearGradient(0, 0, cssW, 0);
+    bg.addColorStop(0, '#fff7f3');
+    bg.addColorStop(1, '#fff1f8');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    // Keep a fixed in-preview player anchor (no movement, full transparent).
+    st.player.x = Math.round(cssW * 0.46);
+    st.player.y = 22;
+
+    // Same trail emit logic as engine.emitTrail
+    st.trailTimer = (st.trailTimer || 0) + 1;
+    if (st.player.trail !== 'none' && st.trailTimer % 4 === 0) {
+      const colors = {
+        trail_glitter: ['#ffd700', '#ff69b4', '#fff'],
+        trail_bubble: ['#ffb6d9', '#fff'],
+        trail_wrappers: ['#ff3366', '#33cc33', '#ffd700'],
+      };
+      const pal = colors[st.player.trail] || ['#ffb6d9'];
+      const color = pal[st.trailTimer % pal.length];
+      // Same particle spawn params as engine.spawnParticles(..., 2)
+      for (let i = 0; i < 2; i++) {
+        st.particles.push({
+          x: st.player.x + st.player.w / 2,
+          y: st.player.y + st.player.h,
+          vx: (Math.random() - 0.5) * 6,
+          vy: (Math.random() - 0.5) * 6 - 2,
+          life: 400 + Math.random() * 300,
+          color,
+          size: 3 + Math.random() * 4,
+        });
+      }
+    }
+
+    // Same particle update as engine.updateWorld
+    st.particles = st.particles.filter((p) => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.2;
+      p.life -= dt;
+      return p.life > 0;
+    });
+
+    // Same particle draw style as engine.render
+    for (const p of st.particles) {
+      ctx.globalAlpha = p.life / 700;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+
   async shopAction() {
     const skins = SHOP_CATALOG.skins || [];
     const item = skins[this.shopIndex];
@@ -772,6 +988,29 @@ const App = {
     const localRes = this.shopActionLocal(item, owned);
     if (!localRes.ok) { this.showToast(localRes.error); return; }
     this.showToast(owned ? '已装备' : '购买成功！');
+    this.renderShop();
+    this.saveProfile();
+  },
+
+  async trailAction() {
+    const trails = SHOP_CATALOG.trails || [];
+    const item = trails[this.trailIndex];
+    if (!item || !this.profile?.token) return;
+    const owned = (this.profile.owned || []).includes(item.id);
+    const equipped = (this.profile.trail || 'none') === item.id;
+    if (equipped) return;
+    const localRes = this.trailActionLocal(item, owned);
+    if (!localRes.ok) { this.showToast(localRes.error); return; }
+    this.showToast(owned ? '拖尾已装备' : '购买成功！');
+    this.renderShop();
+    this.saveProfile();
+  },
+
+  async unequipTrail() {
+    if (!this.profile) return;
+    if ((this.profile.trail || 'none') === 'none') return;
+    this.profile.trail = 'none';
+    this.showToast('已卸下拖尾');
     this.renderShop();
     this.saveProfile();
   },
@@ -797,6 +1036,22 @@ const App = {
     if (!ownedList.includes(item.id)) ownedList.push(item.id);
     this.profile.owned = ownedList;
     this.profile.skin = item.id;
+    return { ok: true };
+  },
+
+  trailActionLocal(item, owned) {
+    if (owned) {
+      this.profile.trail = item.id;
+      return { ok: true };
+    }
+    const coins = Number(this.profile.coins) || 0;
+    const price = Number(item.price) || 0;
+    if (coins < price) return { ok: false, error: '金币不足' };
+    this.profile.coins = coins - price;
+    const ownedList = Array.isArray(this.profile.owned) ? [...this.profile.owned] : [];
+    if (!ownedList.includes(item.id)) ownedList.push(item.id);
+    this.profile.owned = ownedList;
+    this.profile.trail = item.id;
     return { ok: true };
   },
 
