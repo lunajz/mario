@@ -9,6 +9,10 @@ const JUMP_FORCE = -13;
 const HIGH_JUMP = -17;
 const MOVE_SPEED = 4.5;
 const SPEED_BOOST = 6.5;
+const BULLET_SPEED_MULT = 3;
+const BULLET_MOVE_SPEED = MOVE_SPEED * BULLET_SPEED_MULT;
+const WAFFLE_SLIDE_SPEED = 6.6;
+const WAFFLE_MAX_FALL = 2.2;
 const LOW_GRAVITY = 0.25;
 const DIFFICULTY = 1.35;
 
@@ -167,8 +171,9 @@ class GameEngine {
       inLowGrav: false, inGel: false, levelCoins: 0,
       big: false, speedBoost: false, highJump: false, canGlide: false,
       canBreakBricks: false, canStompEnemies: false, fireTouch: false,
-      flutterJump: false, lowGravSnack: false, hitShield: false,
+      flutterJump: false, lowGravSnack: false, hitShield: false, waffleGlide: false,
       snackId: null, smokeFx: false, sparkleFx: false, spinFx: false, spinAngle: 0,
+      bulletForm: false,
       skin: 'skin_default', trail: 'none', splat: 'default', nickname: '',
     };
   }
@@ -196,25 +201,51 @@ class GameEngine {
       if (player.powerTimer <= 0) this.clearPower(player);
     }
 
-    const speed = player.speedBoost ? SPEED_BOOST : MOVE_SPEED;
+    let speed = MOVE_SPEED;
+    if (player.bulletForm) speed = BULLET_MOVE_SPEED;
+    else if (player.speedBoost) speed = SPEED_BOOST;
     let grav = player.inLowGrav ? LOW_GRAVITY : GRAVITY;
     if (player.lowGravSnack && !player.inLowGrav) grav *= 0.62;
     const jumpF = player.highJump ? HIGH_JUMP : JUMP_FORCE;
 
     if (input.left) { player.vx = -speed; player.facing = -1; }
     else if (input.right) { player.vx = speed; player.facing = 1; }
+    else if (player.bulletForm) player.vx *= 0.94;
     else { player.vx *= player.inGel ? GEL_FRICTION : FRICTION; }
 
     if (input.jump && player.canJump && player.onGround) {
       player.vy = jumpF;
       player.onGround = false;
       player.canJump = false;
+      if (player.waffleGlide) {
+        player.vx = player.facing * WAFFLE_SLIDE_SPEED;
+      }
       this.spawnParticles(player.x + player.w / 2, player.y + player.h, '#ffb6d9', 5);
       if (typeof gameAudio !== 'undefined') gameAudio.playJump();
     }
     if (!input.jump) player.canJump = true;
 
-    if (player.canGlide && !player.onGround && player.vy > 0) {
+    if (player.waffleGlide && !player.onGround) {
+      if (input.left) {
+        player.vx = -WAFFLE_SLIDE_SPEED;
+        player.facing = -1;
+      } else if (input.right) {
+        player.vx = WAFFLE_SLIDE_SPEED;
+        player.facing = 1;
+      } else if (Math.abs(player.vx) < WAFFLE_SLIDE_SPEED * 0.55) {
+        player.vx = player.facing * WAFFLE_SLIDE_SPEED;
+      }
+      if (player.vy < 0) {
+        player.vy *= 0.97;
+        if (player.vy > -2.2) player.vy = Math.min(player.vy + 0.06, 0.55);
+      } else {
+        player.vy = Math.min(player.vy, WAFFLE_MAX_FALL);
+      }
+      grav *= 0.16;
+      if (Math.random() < 0.14) {
+        this.spawnParticles(player.x + player.w / 2, player.y + player.h * 0.6, '#7cfc00', 1);
+      }
+    } else if (player.canGlide && !player.onGround && player.vy > 0) {
       player.vy *= 0.92;
     }
     if (player.flutterJump && !player.onGround && player.vy > 0 && input.jump) {
@@ -223,6 +254,11 @@ class GameEngine {
 
     if (player.spinFx) {
       player.spinAngle = (player.spinAngle || 0) + dt * 0.02;
+    }
+
+    if (player.bulletForm && Math.abs(player.vx) > 2 && Math.random() < 0.22) {
+      const tailX = player.facing > 0 ? player.x - 4 : player.x + player.w + 4;
+      this.spawnParticles(tailX, player.y + player.h * 0.55, '#ff9933', 1);
     }
 
     player.vy += grav;
@@ -247,6 +283,23 @@ class GameEngine {
     }
 
     return 'alive';
+  }
+
+  getPlayerHeadOffset(player) {
+    return (player.big || player.canBreakBricks) ? player.h * 0.3 : 0;
+  }
+
+  getPlayerHitbox(player, y = player.y) {
+    const scale = player.big ? 1.3 : 1;
+    const w = player.w * scale;
+    const h = player.h * scale;
+    const headOffset = this.getPlayerHeadOffset(player);
+    return {
+      x: player.x - (w - player.w) / 2,
+      y: y - headOffset,
+      w,
+      h: h + headOffset,
+    };
   }
 
   createMovingPlatState(p) {
@@ -319,15 +372,22 @@ class GameEngine {
   }
 
   resolveCollisionY(player, prevY = player.y) {
-    const prevTop = prevY;
+    const headOffset = this.getPlayerHeadOffset(player);
     const prevBottom = prevY + player.h;
+    const head = player.y - headOffset;
+    const feet = player.y + player.h;
     for (const p of this.platforms) {
       if (!p.active) continue;
       const px = this.getPlatformX(p);
       const py = this.getPlatformY(p);
-      if (this.aabb(player, { x: px, y: py, w: p.w, h: p.h })) {
-        if (player.vy >= 0 && prevBottom <= py + 10) {
-          player.y = py - player.h;
+      const plat = { x: px, y: py, w: p.w, h: p.h };
+      if (!this.aabb({ x: player.x, y: head, w: player.w, h: feet - head }, plat)) continue;
+
+      const platBottom = py + p.h;
+      const platTop = py;
+
+      if (player.vy >= 0 && prevBottom <= platTop + 12) {
+          player.y = platTop - player.h;
           player.vy = 0;
           player.onGround = true;
           if (p.type === 'bouncy') {
@@ -343,14 +403,19 @@ class GameEngine {
           if (p.type === 'hidden' && p.reveal) {
             if (Math.abs(player.x - p.reveal) < 80) this.revealedHidden[p.reveal] = true;
           }
-        } else if (player.vy < 0 && prevTop >= py + p.h - 10) {
-          player.y = py + p.h;
-          player.vy = 0;
-          if (p.type === 'question' || p.type === 'brick') {
+        } else if (player.vy < 0 && prevBottom > platBottom - 6 && head < platBottom + 20) {
+          const blockLike = p.type === 'question' || p.type === 'brick';
+          if (p.type === 'brick' && p.active && player.canBreakBricks) {
             this.hitBlock(p, player);
+            if (!p.active) {
+              player.vy = Math.min(player.vy, -9);
+              continue;
+            }
           }
+          player.y = platBottom + headOffset;
+          player.vy = 0;
+          if (blockLike) this.hitBlock(p, player);
         }
-      }
     }
   }
 
@@ -398,6 +463,8 @@ class GameEngine {
       p.active = false;
       this.spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#c87850', 12);
       if (typeof gameAudio !== 'undefined') gameAudio.playPowerup(4);
+    } else if (p.type === 'brick' && p.active) {
+      this.spawnParticles(p.x + p.w / 2, p.y + p.h, '#c87850', 4);
     }
   }
 
@@ -647,6 +714,8 @@ class GameEngine {
       if (typeof gameAudio !== 'undefined') gameAudio.playCoin();
       return;
     }
+    if (player.powerSource === 'snack') return;
+
     player.powerType = type;
     player.powerSource = source;
     player.powerTimer = POWERUP_DURATION;
@@ -656,6 +725,17 @@ class GameEngine {
     player.speedBoost = false;
     player.highJump = false;
     player.canGlide = false;
+    player.canBreakBricks = false;
+    player.canStompEnemies = false;
+    player.fireTouch = false;
+    player.flutterJump = false;
+    player.lowGravSnack = false;
+    player.waffleGlide = false;
+    player.bulletForm = false;
+    player.hitShield = false;
+    player.smokeFx = false;
+    player.sparkleFx = false;
+    player.spinFx = false;
 
     switch (type) {
       case 0: player.invincible = POWERUP_DURATION; break;
@@ -683,6 +763,8 @@ class GameEngine {
     player.fireTouch = false;
     player.flutterJump = false;
     player.lowGravSnack = false;
+    player.waffleGlide = false;
+    player.bulletForm = false;
     player.hitShield = false;
     player.smokeFx = false;
     player.sparkleFx = false;
@@ -1161,9 +1243,59 @@ class GameEngine {
     ctx.fill();
   }
 
+  drawBulletForm(ctx, x, y, w, h, facing) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    ctx.save();
+    ctx.fillStyle = '#ff9933';
+    ctx.beginPath();
+    if (facing > 0) {
+      ctx.moveTo(x + 2, cy);
+      ctx.lineTo(x - w * 0.14, cy - h * 0.14);
+      ctx.lineTo(x - w * 0.14, cy + h * 0.14);
+    } else {
+      ctx.moveTo(x + w - 2, cy);
+      ctx.lineTo(x + w + w * 0.14, cy - h * 0.14);
+      ctx.lineTo(x + w + w * 0.14, cy + h * 0.14);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#151515';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w * 0.46, h * 0.44, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    const eyeX = facing > 0 ? cx + w * 0.16 : cx - w * 0.16;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(eyeX, cy - h * 0.08, h * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#cc0000';
+    ctx.beginPath();
+    ctx.arc(eyeX + facing * 4, cy - h * 0.06, h * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   drawPlayer(ctx, player, cam) {
     const x = player.x - cam;
     const y = player.y;
+
+    if (player.bulletForm) {
+      const bw = player.w * 1.4;
+      const bh = player.h * 0.82;
+      const bx = x - (bw - player.w) / 2;
+      const by = y + player.h - bh;
+      if (player.invincible > 0 && Math.floor(player.invincible / 100) % 2 === 0) {
+        ctx.globalAlpha = 0.55;
+      }
+      this.drawBulletForm(ctx, bx, by, bw, bh, player.facing);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
     const img = this.images.mario;
     const skinImg = this.skinImages?.[player.skin] || this.skinImages?.skin_default || null;
 

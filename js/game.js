@@ -36,8 +36,8 @@
   const SNACK_EFFECTS = {
     snack_bullet: {
       iconType: 5,
-      label: { zh: { head: '咻咻冲刺', detail: '移动速度提升' }, en: { head: 'Pew Pew Dash', detail: 'Faster movement' } },
-      apply(p) { p.speedBoost = true; },
+      label: { zh: { head: '炮弹变身', detail: '变身为炮弹，移动速度 ×3' }, en: { head: 'Bullet Form', detail: 'Become a bullet — 3× move speed' } },
+      apply(p) { p.bulletForm = true; },
     },
     snack_block: {
       iconType: 4,
@@ -46,8 +46,8 @@
     },
     snack_waffle: {
       iconType: 7,
-      label: { zh: { head: '管道传送', detail: '滑翔 + 加速穿越' }, en: { head: 'Pipe Warp', detail: 'Glide and sprint' } },
-      apply(p) { p.canGlide = true; p.speedBoost = true; },
+      label: { zh: { head: '管道滑行', detail: '起跳后向前滑行、缓慢飘落' }, en: { head: 'Pipe Slide', detail: 'Jump, slide forward, float down slowly' } },
+      apply(p) { p.waffleGlide = true; },
     },
     snack_locket: {
       iconType: 0,
