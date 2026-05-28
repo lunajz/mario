@@ -25,8 +25,8 @@ const LEVEL_DATA = [
       { x: 1900, y: 350, w: 80, h: 30, type: 'normal' },
       { x: 2050, y: 300, w: 100, h: 30, type: 'normal' },
     ],
-    switches: [{ x: 1480, y: 140, id: 's1' }],
-    doors: [{ x: 2280, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [],
     enemies: [],
     collectibles: [
@@ -104,8 +104,8 @@ const LEVEL_DATA = [
       { x: 1500, y: 280, w: 80, h: 120, dir: -1, power: 16 },
       { x: 1900, y: 320, w: 80, h: 120, dir: 1, power: 13 },
     ],
-    switches: [{ x: 1450, y: 300, id: 's1' }],
-    doors: [{ x: 2650, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [],
     enemies: [],
     collectibles: [
@@ -180,8 +180,8 @@ const LEVEL_DATA = [
       { x: 2200, y: 310, w: 80, h: 30, type: 'normal' },
       { x: 2400, y: 520, w: 600, h: 80, type: 'normal' },
     ],
-    switches: [{ x: 1300, y: 120, id: 's1' }],
-    doors: [{ x: 2880, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [
       { x: 450, y: 560, w: 50, h: 20, type: 'spike' },
       { x: 1400, y: 560, w: 100, h: 20, type: 'spike' },
@@ -289,8 +289,8 @@ const LEVEL_DATA = [
       { x: 1900, y: 420, w: 100, h: 30, type: 'moving', moveX: [1900, 2200], speed: 3 },
       { x: 2300, y: 520, w: 500, h: 80, type: 'normal' },
     ],
-    switches: [{ x: 2100, y: 370, id: 's1' }],
-    doors: [{ x: 2650, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [
       { x: 250, y: 600, w: 30, h: 200, type: 'pit' },
       { x: 500, y: 600, w: 40, h: 200, type: 'pit' },
@@ -300,7 +300,7 @@ const LEVEL_DATA = [
     ],
     enemies: [],
     collectibles: [
-      { x: 350, y: 470, type: 'coin' },
+      { x: 320, y: 495, type: 'coin' },
       { x: 1050, y: 350, type: 'question' },
       { x: 2000, y: 370, type: 'coin' },
     ],
@@ -465,11 +465,8 @@ const LEVEL_DATA = [
       { x: 2000, y: 250, w: 200, h: 30, type: 'normal' },
       { x: 2250, y: 520, w: 950, h: 80, type: 'normal' },
     ],
-    switches: [
-      { x: 1300, y: 310, id: 's1' },
-      { x: 2100, y: 210, id: 's2' },
-    ],
-    doors: [{ x: 3050, y: 440, w: 60, h: 80, switchId: 's1', switchId2: 's2' }],
+    switches: [],
+    doors: [],
     hazards: [
       { x: 350, y: 560, w: 50, h: 20, type: 'spike' },
       { x: 750, y: 560, w: 50, h: 20, type: 'spike' },
@@ -599,8 +596,8 @@ const LEVEL_DATA = [
       { x: 1750, y: 300, w: 80, h: 30, type: 'normal' },
       { x: 1900, y: 520, w: 700, h: 80, type: 'normal' },
     ],
-    switches: [{ x: 1050, y: 200, id: 's1' }],
-    doors: [{ x: 2480, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [],
     enemies: [],
     collectibles: [
@@ -629,12 +626,8 @@ const LEVEL_DATA = [
       { x: 1900, y: 400, w: 100, h: 30, type: 'normal' },
       { x: 2300, y: 350, w: 100, h: 30, type: 'normal' },
     ],
-    switches: [
-      { x: 350, y: 380, id: 's1' },
-      { x: 750, y: 340, id: 's2' },
-      { x: 1150, y: 380, id: 's3' },
-    ],
-    doors: [{ x: 2880, y: 440, w: 60, h: 80, switchId: 's1', switchId2: 's2', switchId3: 's3' }],
+    switches: [],
+    doors: [],
     hazards: [
       { x: 500, y: 560, w: 150, h: 20, type: 'spike' },
       { x: 1300, y: 560, w: 150, h: 20, type: 'spike' },
@@ -718,8 +711,8 @@ const LEVEL_DATA = [
     rollers: [
       { x: 1800, y: 490, r: 35, speed: 3, dir: 1 },
     ],
-    switches: [{ x: 2500, y: 360, id: 's1' }],
-    doors: [{ x: 3280, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [
       { x: 1300, y: 560, w: 50, h: 20, type: 'spike' },
     ],
@@ -760,8 +753,8 @@ const LEVEL_DATA = [
       { x: 2250, y: 180, w: 200, h: 30, type: 'normal' },
       { x: 2500, y: 520, w: 500, h: 80, type: 'normal' },
     ],
-    switches: [{ x: 2350, y: 140, id: 's1' }],
-    doors: [{ x: 2880, y: 440, w: 60, h: 80, switchId: 's1' }],
+    switches: [],
+    doors: [],
     hazards: [],
     enemies: [],
     collectibles: [

@@ -449,10 +449,10 @@ class GameEngine {
       const cy = c.y + Math.sin(c.bob + this.levelTime * 3) * 5;
       if (this.aabb(player, { x: c.x, y: cy, w: 28, h: 28 })) {
         if (c.type === 'coin') {
+          c.active = false;
+          this.spawnParticles(c.x + 14, cy + 14, '#ffd700', 8);
           if (this.coinRewardsEnabled) {
-            c.active = false;
             player.levelCoins = (player.levelCoins || 0) + 1;
-            this.spawnParticles(c.x + 14, cy + 14, '#ffd700', 8);
           }
         } else {
           c.active = false;
@@ -489,16 +489,10 @@ class GameEngine {
       }
     }
 
-    // Check door / exit
+    // Check exit — reaching the flag always completes the level
     const exit = this.level.exit;
     if (player.x + player.w > exit.x && player.y + player.h > exit.y - 40) {
-      const doorNeeded = this.doors.length > 0;
-      if (doorNeeded) {
-        const allOpen = this.doors.every(d => this.isDoorOpen(d));
-        if (allOpen) return 'complete';
-      } else {
-        return 'complete';
-      }
+      return 'complete';
     }
 
     // Particles
