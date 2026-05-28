@@ -148,7 +148,8 @@ html, body {
   position: absolute;
   top: 172px;
   right: 12px;
-  width: min(960px, 98vw);
+  width: fit-content;
+  max-width: min(960px, 98vw);
   max-height: min(92vh, 720px);
   overflow: auto;
   z-index: 57;
@@ -182,9 +183,8 @@ html, body {
   background: rgba(255, 255, 255, 0.05);
   padding: 8px;
 }
-.snack-preview.is-idle img,
-.snack-preview.is-idle .snack-preview-info {
-  visibility: hidden;
+.snack-preview.is-idle {
+  display: none;
 }
 .snack-preview img {
   display: block;
