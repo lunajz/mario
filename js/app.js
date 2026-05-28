@@ -75,6 +75,16 @@ const App = {
 
   $(id) { return document.getElementById(id); },
 
+  isDemoUser() {
+    const nick = String(this.profile?.nickname || '').trim().toLowerCase();
+    return nick === 'demo';
+  },
+
+  syncDebugCoinsButton() {
+    const btn = this.$('btnDebugCoins');
+    if (btn) btn.classList.toggle('hidden', !this.isDemoUser());
+  },
+
   showScreen(name) {
     this.screen = name;
     document.querySelectorAll('[data-screen]').forEach((el) => {
@@ -762,6 +772,7 @@ const App = {
   },
 
   renderShop() {
+    this.syncDebugCoinsButton();
     const coinsEl = this.$('shopCoins');
     if (coinsEl) coinsEl.textContent = this.profile?.coins || 0;
     this.renderSkinCarousel();
@@ -1046,6 +1057,7 @@ const App = {
   },
 
   debugAddCoins(amount = 100) {
+    if (!this.isDemoUser()) return;
     if (!this.profile) return;
     this.profile.coins = (Number(this.profile.coins) || 0) + amount;
     this.showToast(`+${amount} 🪙`);

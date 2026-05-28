@@ -462,6 +462,10 @@
   margin-left: auto;
 }
 
+.btn-debug.hidden {
+  display: none !important;
+}
+
 .btn-debug:hover { background: #fff; color: #5a1a4a; }
 
 .leaderboard-list {
